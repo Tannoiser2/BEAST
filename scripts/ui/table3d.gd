@@ -22,6 +22,7 @@ var pieces := {}                     # chiave -> Node3D
 var tweens := {}
 var marks: Node3D
 var fx_root: Node3D
+var fx_live := {}                    # luogo -> scritte fluttuanti ancora visibili
 var highlights := {}                 # luogo -> anello
 var hl_locs: Array = []
 var view: Dictionary = {}
@@ -761,7 +762,15 @@ func _set_wounds(n: Node3D, w: int, armor := 0) -> void:
 func fx_text(l: String, text: String, col := Color("#ffcf6a")) -> void:
 	if not M["locs"].has(l):
 		return
+	# più scritte nello stesso luogo a breve distanza (rivelata due volte, ricerca e attacco…) si
+	# sovrapponevano e diventavano illeggibili: la stessa scritta non si ripete, le altre si impilano
+	var live: Array = (fx_live.get(l, []) as Array).filter(func(x): return is_instance_valid(x))
+	for x in live:
+		if x.text == text:
+			return
+	fx_live[l] = live
 	var lb := Label3D.new()
+	live.append(lb)
 	lb.text = text
 	# font del gioco (quello di sistema si vedeva male: lettere sovrapposte) e bordo sottile disegnato prima
 	lb.font = UI.font_bold
@@ -774,7 +783,7 @@ func fx_text(l: String, text: String, col := Color("#ffcf6a")) -> void:
 	lb.outline_render_priority = 1
 	lb.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	lb.no_depth_test = true
-	lb.position = loc_pos(l) + Vector3(0, 1.4, 0)
+	lb.position = loc_pos(l) + Vector3(0, 1.4 + 0.42 * (live.size() - 1), 0)
 	fx_root.add_child(lb)
 	var tw := create_tween()
 	tw.tween_property(lb, "position", lb.position + Vector3(0, 0.8, 0), 1.6)
