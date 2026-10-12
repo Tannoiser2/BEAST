@@ -1,0 +1,25 @@
+[remap]
+
+importer="wavefront_obj"
+importer_version=1
+type="Mesh"
+uid="uid://ct04q718tcsxw"
+path="res://.godot/imported/sheep.obj-e8e4994ddda554f1517b56143ac60840.mesh"
+
+[deps]
+
+files=["res://.godot/imported/sheep.obj-e8e4994ddda554f1517b56143ac60840.mesh"]
+
+source_file="res://assets/models/sheep.obj"
+dest_files=["res://.godot/imported/sheep.obj-e8e4994ddda554f1517b56143ac60840.mesh", "res://.godot/imported/sheep.obj-e8e4994ddda554f1517b56143ac60840.mesh"]
+
+[params]
+
+generate_tangents=true
+generate_lods=true
+generate_shadow_mesh=true
+generate_lightmap_uv2=false
+generate_lightmap_uv2_texel_size=0.2
+scale_mesh=Vector3(1, 1, 1)
+offset_mesh=Vector3(0, 0, 0)
+force_disable_mesh_compression=false

@@ -1,0 +1,4 @@
+Metti qui le miniature 3D in formato .glb, una per personaggio, con il nome del suo id
+(per esempio bolgin.glb, assar.glb, wolf.glb). Il gioco le usa al posto delle sagome di cartone
+senza toccare il codice: le scala da solo all'altezza giusta e le appoggia sul tavolo.
+Le genera lo script meshy/genera_miniature.py (vedi README).

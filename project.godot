@@ -1,0 +1,45 @@
+; Engine configuration file.
+config_version=5
+
+[application]
+
+config/name="Beast"
+config/description="Adattamento digitale di BEAST con l'espansione SHATTERED ISLES (Studio Midhall) per uso personale."
+run/main_scene="res://scenes/Main.tscn"
+config/features=PackedStringArray("4.4")
+config/icon="res://assets/icon.png"
+boot_splash/bg_color=Color(0.04, 0.05, 0.05, 1)
+boot_splash/image="res://assets/splash.png"
+boot_splash/fullsize=false
+boot_splash/use_filter=true
+
+[display]
+
+window/size/viewport_width=1920
+window/size/viewport_height=1080
+window/size/mode=2
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+window/handheld/orientation=6
+
+[input_devices]
+
+pointing/emulate_mouse_from_touch=true
+
+[rendering]
+
+textures/canvas_textures/default_texture_filter=1
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
+textures/vram_compression/import_etc2_astc=true
+anti_aliasing/quality/msaa_3d=1
+
+[debug]
+
+gdscript/warnings/inference_on_variant=0
+gdscript/warnings/unused_variable=0
+gdscript/warnings/unused_local_constant=0
+gdscript/warnings/shadowed_variable=0
+gdscript/warnings/integer_division=0
+gdscript/warnings/narrowing_conversion=0
+gdscript/warnings/untyped_declaration=0

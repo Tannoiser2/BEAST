@@ -1,0 +1,25 @@
+[remap]
+
+importer="wavefront_obj"
+importer_version=1
+type="Mesh"
+uid="uid://ca15r7q6sym5h"
+path="res://.godot/imported/Trim.obj-88ab1737cae0c12d60fab139d1d41193.mesh"
+
+[deps]
+
+files=["res://.godot/imported/Trim.obj-88ab1737cae0c12d60fab139d1d41193.mesh"]
+
+source_file="res://assets/table/Trim.obj"
+dest_files=["res://.godot/imported/Trim.obj-88ab1737cae0c12d60fab139d1d41193.mesh", "res://.godot/imported/Trim.obj-88ab1737cae0c12d60fab139d1d41193.mesh"]
+
+[params]
+
+generate_tangents=true
+generate_lods=true
+generate_shadow_mesh=true
+generate_lightmap_uv2=false
+generate_lightmap_uv2_texel_size=0.2
+scale_mesh=Vector3(1, 1, 1)
+offset_mesh=Vector3(0, 0, 0)
+force_disable_mesh_compression=false
