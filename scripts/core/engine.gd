@@ -174,6 +174,10 @@ func initial_setup() -> void:
 		for b in beasts():
 			await place_summon(b, summon_spots(b))
 	ev({"t": "setup", "commit": BSState.salt_commit(salt)})
+	# disposizione iniziale (pubblica) di animali e coloni: serve al replay di fine partita
+	ev({"t": "board",
+		"animals": animals.map(func(a): return {"id": a["id"], "kind": a["kind"], "loc": a["loc"]}),
+		"settlers": settlers.map(func(x): return {"id": x["id"], "kind": x["kind"], "loc": x["loc"]})})
 	changed.emit()
 	# la Bestia parte dal centro e muove di due passi con le carte Movimento
 	for b in beasts():

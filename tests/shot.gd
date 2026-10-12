@@ -50,6 +50,8 @@ func _run() -> void:
 	m.hunters = ["assar", "iona", "grimgeir"]
 	m.beast_ai = [false, true]
 	m.hunter_ai = [mode != "hotseat", true, true]
+	if mode == "replay":
+		m.speed = 3
 	m.speed = 3
 	m.level = 1
 	m._on_start()
@@ -61,7 +63,7 @@ func _run() -> void:
 	var answered := 0
 	var passed := false
 	var fr := 0
-	while Time.get_ticks_msec() - t0 < 900000:
+	while Time.get_ticks_msec() - t0 < 2400000:
 		await process_frame
 		fr += 1
 		if fr % 200 == 0:
@@ -69,7 +71,20 @@ func _run() -> void:
 		if g.end_panel != null and is_instance_valid(g.end_panel):
 			await wait(40)
 			await shot("fine_partita")
-			g.end_panel.get_child(0).visible = false
+			var box: Control = g.end_panel.get_child(0)
+			if mode == "replay":
+				g._replay_open(g.eng.results, g.eng.events, box)
+				g.rp_speed = 4.0
+				print("replay: %d passi" % g.rp_steps.size())
+				for frac in [0.15, 0.5, 0.97]:
+					while float(g._rp_progress()) < frac:
+						await process_frame
+					await shot("replay_%d" % int(frac * 100))
+				g._replay_close(box)
+				await wait(10)
+				await shot("dopo_replay")
+				break
+			box.visible = false
 			await wait(10)
 			await shot("fine_percorso_bestia")
 			break
@@ -91,6 +106,40 @@ func _run() -> void:
 			g.table.reset_camera()
 			await wait(10)
 			await shot("tavolo_3d")
+			# prova del mouse: trascinamento col tasto destro e rotella devono muovere la telecamera
+			var y0: float = g.table.yaw
+			var d0: float = g.table.dist
+			var c := Vector2(960, 500)
+			var pr := InputEventMouseButton.new()
+			pr.button_index = MOUSE_BUTTON_RIGHT
+			pr.pressed = true
+			pr.position = c
+			pr.global_position = c
+			root.push_input(pr)
+			for k in range(5):
+				var mm := InputEventMouseMotion.new()
+				mm.position = c + Vector2(20 * (k + 1), 0)
+				mm.global_position = mm.position
+				mm.relative = Vector2(20, 0)
+				mm.button_mask = MOUSE_BUTTON_MASK_RIGHT
+				root.push_input(mm)
+				await process_frame
+			var rl: InputEventMouseButton = pr.duplicate()
+			rl.pressed = false
+			root.push_input(rl)
+			var wh := InputEventMouseButton.new()
+			wh.button_index = MOUSE_BUTTON_WHEEL_UP
+			wh.pressed = true
+			wh.position = c
+			wh.global_position = c
+			root.push_input(wh)
+			await wait(3)
+			print("PROVA MOUSE: rotazione %.1f -> %.1f, distanza %.2f -> %.2f" % [y0, g.table.yaw, d0, g.table.dist])
+			g.table.reset_camera()
+		if not shots.has("rivelata") and e.events.size() > 0 and str(e.events.back().get("t", "")) == "reveal":
+			shots["rivelata"] = true
+			await wait(12)
+			await shot("rivelata")
 		if not combat and e.events.size() > 0:
 			var last: Dictionary = e.events.back()
 			if str(last.get("t", "")) in ["attack", "sattack", "dmg"] and e.phase == "day":

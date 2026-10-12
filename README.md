@@ -36,8 +36,17 @@ pubblicamente.
 - **Carte con lo zoom**: passa il mouse su una carta (della mano o di una scelta) per vederla in grande
   con il testo italiano; il pulsante ARSENALE mostra tutto ciò che è stato giocato e scartato.
 - **IA** su tre livelli (Facile / Normale / Difficile), vedi sotto.
+- **Schede dei personaggi** (a sinistra): sotto ogni personaggio le sue abilità, con il bordo colorato
+  se sono pronte, spente con «usata» se sono già state giocate oggi (tornano in mano di notte), con
+  «bloccata» se la Bestia non è nel luogo giusto per usarle (lo vede solo chi sa dov'è); i potenziamenti
+  sbloccati sono le voci ★ su fondo oro. Passa il mouse su una voce per il testo, clic per la plancia.
 - **Regole in breve** (REGOLE), **diario** (DIARIO), fine partita con il vincitore, il percorso della
   Bestia e la verifica che la Bestia non abbia barato.
+- **Replay** (RIVEDI LA PARTITA, a fine partita): tutta la partita di seguito, senza fermarsi ai turni,
+  con la Bestia sempre visibile e il suo percorso che si disegna sulla mappa mentre si muove (rosso per la
+  prima Bestia, viola per la seconda), i cacciatori, gli evocati, animali e coloni, attacchi, morti e ricerche. Pausa, velocità
+  da ½ a ×4, ricomincia; la telecamera resta libera. Funziona anche online: usa gli eventi pubblici e la
+  rivelazione finale della Bestia, la stessa usata per la verifica.
 
 ## Comandi
 - **Telecamera**: tasto destro trascinato = ruota e inclina; rotella o pizzico = zoom; sinistro
