@@ -103,7 +103,17 @@ segreti, 0 accessi negati, verifica superata, anche con uscita e rientro a metà
 - **Taratura** con partite IA contro IA senza grafica (`tests/sim.gd`, 80 partite per casella, Bestie e
   cacciatori a caso). Percentuale di vittorie della Bestia:
 
-RISULTATI_IA
+| Contratto | Normale vs Normale | Bestia Difficile | Cacciatori Difficili | Difficile vs Difficile |
+|---|---|---|---|---|
+| Reggente delle rovine (2–3) | 7% | 18% | 7% | 16% |
+| Un patto dimenticato (4) | 26% | 32% | 27% | 25% |
+| L'arrivo della Titan (5) | 72% | 77% | 31% | 36% |
+
+  La Bestia Difficile vince più della Normale in tutti e tre i contratti (Reggente 7% → 18%, Patto 26% → 32%,
+  Titan 72% → 77%). I cacciatori Difficili battono nettamente i Normali nella Titan (72% → 31% di vittorie della
+  Bestia) e contro la Bestia Difficile nel Patto (32% → 25%); nel Reggente i cacciatori vincono già quasi
+  sempre e la differenza non si vede. Le 960 partite di prova hanno superato tutte la verifica commit–reveal.
+  I pesi del livello Difficile sono in `TUNE_BASE` (`scripts/core/ai.gd`) e si possono provare con `BS_TUNE`.
 
 ## Carte sostituibili e testi
 - Tutte le immagini di carte, schede e contratti passano da `assets/cards/manifest.json` (id carta →
