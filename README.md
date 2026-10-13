@@ -21,10 +21,17 @@ pubblicamente.
   abilità, potenziamenti rossi/blu e gialli, Talenti bestiali, Oggetti del cacciatore, trappole, torri di
   guardia, carte Azione con il draft dell'alba, carte Caccia e Tracciamento, evocazioni (Polipo, Lupo,
   Banshee, Basilisco, Mutaforma, Sognatore, Abominio, Ammiratore, Cinghiale da guerra) e le Rovine.
-- **I tre contratti della mappa Lower Shattered Isles**: *Reggente delle rovine* (2–3 giocatori, contatore
-  del Dominio), *Un patto dimenticato* (4 giocatori) e *L'arrivo della Titan* (5 giocatori, due Bestie,
-  coloni da scortare dalla Titan ad Aurelia, Elysara ed East Camp). Notti con richieste e ricompense del
-  contratto, Notte finale, condizioni di vittoria.
+- **Tutte e quattro le mappe e tutti i 10 contratti**, scelti nel menu per mappa:
+  - *Isole Frantumate inferiori*: *Reggente delle rovine* (2–3, contatore del Dominio), *Un patto
+    dimenticato* (4), *L'arrivo della Titan* (5, due Bestie, coloni da scortare).
+  - *Isole Frantumate superiori*: *Segreti di un'era perduta* (2–3), *Liberare l'Abisso* (4, palude
+    abissale come habitat preferito, Guglia abissale che protegge i cacciatori), *Un'alleanza improbabile*
+    (5, due Bestie, coloni con l'Armatura).
+  - *Terre sommerse*: *La Grande Purificazione* (2–3), *Naufragio* (2–3, due Contadini da scortare dal
+    relitto a Tiveden).
+  - *Distese del Nord*: *Attacco agli insediamenti del Nord* (4) e *Il risveglio degli dèi del Nord* (4),
+    con tre Notti.
+  Notti con richieste e ricompense del contratto, Notte finale, condizioni di vittoria.
 - **Movimento nascosto gestito dal motore**: la Bestia sceglie le carte Movimento (anche false) e le
   direzioni; il gioco mette le tracce, risponde a Ricerca/Perlustrazione/Seguire le tracce, rivela quando
   serve e alla fine mostra il percorso completo della Bestia sulla mappa.
@@ -152,24 +159,18 @@ python3 meshy/genera_miniature.py bolgin wolf # solo alcune
 Le immagini di riferimento sono in `meshy/riferimenti/` (le sagome del modulo, con lo sfondo trasparente).
 Dopo, riapri il progetto in Godot (o fai il push: la action di GitHub importa i modelli da sola).
 
-**Miniature già fatte (13)**, generate con Meshy dalle sagome del modulo:
-- Cacciatori del gioco base: assar, grimgeir, helga, iona, krim, varja
-- Bestie: esmeria
+**Miniature già fatte (26)**, generate con Meshy dalle illustrazioni del modulo:
+- Cacciatori: assar, grimgeir, helga, iona, krim, varja (gioco base); eivind, valdi, fara, esmeria_h (Isole Frantumate)
+- Bestie: bolgin, fangrir, mara, raaga, hogbad, esmeria (gioco base); vacker, thalduk, akkeron, fk (Isole Frantumate)
 - Evocati: banshee, basilisk, polyp, warhog, wolf
 - Torre di guardia: watchtower
 
-**Miniature da fare (18):**
-- Cacciatori: eivind, valdi, fara, esmeria_h
-- Bestie: bolgin, fangrir, mara, raaga, hogbad, vacker, thalduk, akkeron, fk (Re Piumato)
-- Evocati e compagni: abomination, admirer, changeling, dreamer, fylgja
+Nel menu di scelta i personaggi con la miniatura compaiono in 3D al posto dell'illustrazione.
+
+**Miniature da fare (5):** evocati e compagni abomination, admirer, changeling, dreamer, fylgja.
 
 ## Cosa manca
-- **Mappe Northern Expanse, Drenched Lands e Great Divide** (gioco base e Isole superiori): le immagini non
-  sono nella cartella del modulo (il modulo le scarica da Steam al momento) e da qui non si possono
-  scaricare. Senza di esse mancano 7 contratti (elencati in `BD.CONTRACTS_MISSING`). Per aggiungerle basta
-  copiare le immagini delle mappe nella cartella BEAST: coordinate dei luoghi e contratti si aggiungono in
-  `scripts/data/bs_data.gd` come per Lower Shattered Isles.
-- Le miniature 3D di cacciatori, Bestie ed evocati (vedi sopra).
+- Le miniature 3D degli ultimi evocati (vedi sopra).
 - Le carte in italiano (si aggiungono in `assets/cards/it/`).
 
 ## Struttura
@@ -203,7 +204,15 @@ perdita per le carte), pacchetto di circa 45 MB.
   Nascondere entrambe le parti richiederebbe un server di terze parti.
 - **Contratti**: ricompense e richieste delle Notti trascritte dalle carte contratto del modulo; dove la
   carta è ambigua: «controllare 2 Rovine» si valuta nel momento del danno; i segnalini della Titan passano
-  sul contratto all'inizio del turno di qualsiasi cacciatore; la Notte finale arriva dopo la seconda Notte.
+  sul contratto all'inizio del turno di qualsiasi cacciatore; la Notte finale arriva dopo l'ultima Notte del contratto (la seconda, o la terza
+  nelle Distese del Nord).
+- **Nuove mappe**: luoghi, habitat, sentieri con le direzioni, animali e coloni ricavati dalle immagini delle
+  mappe. Icone delle carte contratto: la spada è un Potere antico, la mano artigliata è Evoca, la maschera
+  grigia è l'Armatura dei coloni. Le ricompense dei cacciatori che valgono per la squadra (torri, Contadino
+  che diventa Nobile) si applicano una volta sola per Notte. In *Liberare l'Abisso* la palude abissale vale
+  come habitat preferito solo per le carte che si giocano sull'habitat preferito.
+- **Naufragio**: nel contratto i coloni da scortare sono Contadini e l'obiettivo è Tiveden; «un colono di
+  Vildmark» e simili si riferiscono a dove si trova il colono quando muore.
 - **Reggente delle rovine**: con le carte del modulo la Bestia vince di rado contro i cacciatori dell'IA
   (il Dominio rosso arriva in media a 6 su 12 in tre giorni). Le regole sono state controllate più volte:
   se nel gioco vero la Bestia ha più spazio, il punto da guardare è il contatore del Dominio.

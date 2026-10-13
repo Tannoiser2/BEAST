@@ -170,6 +170,7 @@ func initial_setup() -> void:
 		ch[h]["grudges"] = int(st.get("hunter_grudge", 0))
 	if st.get("titan", false):
 		await _titan_setup()
+	await _extra_setup(st)
 	if st.get("beast_summon", false):
 		for b in beasts():
 			await place_summon(b, summon_spots(b))
@@ -426,6 +427,8 @@ func day_phase() -> void:
 		guard += 1
 		var ci: int = order[idx]
 		var r := await take_turn(ci)
+		if is_beast(ci):
+			await beast_turn_end(ci)
 		if game_over:
 			return
 		if ch[ci].get("mesmerised_by", -1) >= 0:
@@ -655,6 +658,17 @@ func req_met(alts: Array, team: String) -> bool:
 					have = int(dom["blue"])
 				"tokens":
 					have = contract_tokens
+				"no_settler_dead":
+					have = 1 if int(kills.get("settler_any", 0)) == 0 else 0
+				"no_hunter_died":
+					have = 1 if int(kills.get("hunter_any", 0)) == 0 else 0
+				_:
+					if k.begins_with("kill_settler_in_"):
+						have = int(kills.get("settler_in_" + k.substr(16), 0))
+					elif k.begins_with("start_alive_"):
+						have = 1 if _start_settler_alive(k.substr(12)) else 0
+					elif k.begins_with("settler_in_"):
+						have = settlers.filter(func(s): return zone_of(s["loc"]) == k.substr(11)).size()
 			if have < need:
 				ok = false
 		if ok:
@@ -745,7 +759,8 @@ func run_special(ci: int, op: Array, ctx: Dictionary) -> void:
 				var s4 := find_obj(settlers, int(str(await decide(ci, {"type": "settler", "prompt": "Quale colono trasforma il suo luogo?", "opts": o3}))))
 				await transform(s4["loc"], ci, "settlement")
 		_:
-			push_warning("Operazione sconosciuta: " + str(op))
+			if not await _contract_op(ci, op, ctx):
+				push_warning("Operazione sconosciuta: " + str(op))
 	if k == "grudge" and ctx.get("card", "") == "ruin:sunken_ruins" and contract_id == "titan":
 		flags["no_settler_hp"] = true
 
@@ -799,3 +814,231 @@ func end_game(winner: String, why: String) -> void:
 	log_msg("[b]%s![/b] %s" % ["Vince la Bestia" if winner == "B" else "Vincono i cacciatori", why])
 	changed.emit()
 	game_ended.emit(results)
+
+
+# ================================================================== contratti delle mappe Isole superiori, Terre sommerse, Distese del Nord
+
+## Preparazione aggiuntiva dei contratti (armature, naufragio, palude abissale, talenti, potenziamenti).
+func _extra_setup(st: Dictionary) -> void:
+	if st.get("shipwreck", false):
+		settlers.clear()
+		var wl: String = M.get("shipwreck_loc", "")
+		if wl == "":
+			wl = settlements()[0]
+		for i in range(2):
+			settlers.append({"id": new_id(), "kind": "farmer", "loc": wl, "wounds": 0, "armor": 0, "start": wl})
+		log_msg("Due Contadini naufraghi sono sulla costa in %s." % loc_label(wl))
+	var armor := int(st.get("settler_armor", 0))
+	if st.get("abyss_setup", false) and beasts().any(func(b): return ch[b].get("abyss", false)):
+		armor = maxi(armor, 1)
+	if armor > 0:
+		for s in settlers:
+			s["armor"] = int(s.get("armor", 0)) + armor
+		log_msg("Ogni colono riceve un'Armatura.")
+	for b in beasts():
+		var nt := int(st.get("beast_talents_random", 0))
+		for i in range(nt):
+			if not talent_deck.is_empty():
+				ch[b]["hand"].append(talent_deck.pop_back())
+		if nt > 0:
+			log_msg("%s riceve %d Talenti bestiali a caso." % [cname(b), nt])
+		if st.get("abyss_setup", false):
+			var h := beast_hab(b)
+			for l in LOCS:
+				if LOCS[l].has("ruin") and has_hab(l, h):
+					await transform(l, b, "abyss")
+			if ch[b].get("abyss", false):
+				var any_l: Array = LOCS.keys().filter(func(x): return not has_hab(x, "settlement") and not is_abyss(x))
+				var l1 := await pick_loc(b, "Palude abissale: quale luogo trasformare?", any_l, false)
+				if l1 != "":
+					await transform(l1, b, "abyss")
+			else:
+				for i in range(3):
+					var pl: Array = LOCS.keys().filter(func(x): return has_hab(x, h) and not is_abyss(x) and not has_hab(x, "settlement"))
+					var l2 := await pick_loc(b, "Palude abissale: quale luogo del tuo habitat trasformare? (%d/3)" % (i + 1), pl, false)
+					if l2 != "":
+						await transform(l2, b, "abyss")
+		if st.has("summons_zone"):
+			var z: String = st["summons_zone"][0]
+			for i in range(int(st["summons_zone"][1])):
+				var sp: Array = LOCS.keys().filter(func(x): return has_hab(x, beast_hab(b)) and zone_of(x) == z)
+				if not sp.is_empty():
+					await place_summon(b, sp)
+		if int(st.get("beast_buy_upgrade", 0)) > 0:
+			await buy_upgrades(b, int(st["beast_buy_upgrade"]), 0)
+
+
+func _start_settler_alive(nm: String) -> bool:
+	for s in settlers:
+		if LOCS.get(s["start"], {}).get("name", "") == nm:
+			return true
+	return false
+
+
+func _once(key: String) -> bool:
+	var k := "%s_%d" % [key, night_no]
+	if flags.get(k, false):
+		return false
+	flags[k] = true
+	return true
+
+
+func _beings(wounded := false) -> Array:
+	var out := []
+	for h in alive_hunters():
+		if ch[h]["loc"] != "" and (not wounded or int(ch[h]["wounds"]) > 0):
+			out.append({"t": "hunter", "ci": h, "at": ch[h]["loc"]})
+	for s in settlers:
+		if not wounded or int(s["wounds"]) > 0:
+			out.append({"t": "settler", "id": s["id"], "kind": s["kind"], "at": s["loc"]})
+	for a in animals:
+		if not wounded or int(a["wounds"]) > 0:
+			out.append({"t": "animal", "id": a["id"], "kind": a["kind"], "at": a["loc"]})
+	return out
+
+
+func _pick_being(ci: int, prompt: String, list: Array) -> Dictionary:
+	if list.is_empty():
+		return {}
+	var opts := []
+	for t in list:
+		opts.append({"id": being_key(t), "label": "%s in %s" % [target_label(t), loc_label(t["at"])], "ref": t, "loc": t["at"]})
+	var r = await decide(ci, {"type": "target", "prompt": prompt, "opts": opts})
+	for o in opts:
+		if str(o["id"]) == str(r):
+			return o["ref"]
+	return list[0]
+
+
+func _abyss_locs() -> Array:
+	return LOCS.keys().filter(func(x): return is_abyss(x))
+
+
+## Operazioni dei contratti aggiunti. Restituisce false se l'operazione non è di questi contratti.
+func _contract_op(ci: int, op: Array, ctx: Dictionary) -> bool:
+	var k: String = op[0]
+	match k:
+		"mvu_per_ruin":
+			var n := ruins_of("H")
+			if n > 0:
+				await hunter_move(ci, n, {"upto": true, "may": true, "label": "%s può muovere fino a %d passi" % [cname(ci), n]})
+		"grudge_per_ruin":
+			var n2 := ruins_of("B")
+			if n2 > 0:
+				await gain_grudge(ci, n2, "Rovine controllate")
+		"abyss_zone_pref":
+			var z := zone_of(ch[ci]["loc"])
+			var h := beast_hab(ci)
+			for i in range(int(op[1])):
+				var pl: Array = LOCS.keys().filter(func(x): return in_zone(x, z) and has_hab(x, h) and not is_abyss(x) and not has_hab(x, "settlement"))
+				var l := await pick_loc(ci, "Quale luogo diventa palude abissale? (%d/%d)" % [i + 1, int(op[1])], pl, true)
+				if l == "":
+					break
+				await transform(l, ci, "abyss")
+		"summon_on_abyss":
+			var al := _abyss_locs()
+			if not al.is_empty():
+				await place_summon(ci, al)
+		"abyss_any_pref":
+			var h2 := beast_hab(ci)
+			var pl2: Array = LOCS.keys().filter(func(x): return has_hab(x, h2) and not is_abyss(x) and not has_hab(x, "settlement"))
+			var l2 := await pick_loc(ci, "Dove mettere una palude abissale?", pl2, true)
+			if l2 != "":
+				await transform(l2, ci, "abyss")
+		"abyss_near_abyss":
+			var cand := {}
+			for a in _abyss_locs():
+				for x in dist_map(a, 2, ""):
+					if not is_abyss(x) and not has_hab(x, "settlement"):
+						cand[x] = true
+			var l3 := await pick_loc(ci, "Dove mettere una palude abissale (fino a 2 passi da un'altra)?", cand.keys(), true)
+			if l3 != "":
+				await transform(l3, ci, "abyss")
+		"abyss_to_settlement":
+			var l4 := await pick_loc(ci, "Quale palude abissale diventa insediamento?", _abyss_locs(), true)
+			if l4 != "":
+				await transform(l4, ci, "settlement")
+		"heal_any":
+			var t := await _pick_being(ci, "A chi togliere 1 ferita?", _beings(true))
+			if not t.is_empty():
+				if t["t"] == "animal":
+					var an := find_obj(animals, t["id"])
+					an["wounds"] = maxi(0, int(an["wounds"]) - int(op[1]))
+				else:
+					heal(t, int(op[1]))
+				log_msg("%s recupera 1 ferita." % target_label(t))
+		"dmg_any":
+			var t2 := await _pick_being(ci, "A chi infliggere 1 danno?", _beings())
+			if not t2.is_empty():
+				await damage(t2, int(op[1]), {"kind": "effect", "ci": ci})
+		"beasts_summons_mv1":
+			for b in beasts():
+				if not ch[b]["dead"]:
+					await beast_move(b, 1, {"upto": true})
+					for su in summons_of(b):
+						await summon_step(b, su, "L'evocato può muovere", true)
+		"atk_or_summon":
+			var r = await decide(ci, {"type": "choice", "prompt": "Attaccare o evocare?", "opts": [{"id": "s", "label": "Evoca"}, {"id": "a", "label": "Attacca"}], "ask_single": true})
+			if str(r) == "a":
+				await run_op(ci, ["atk"], ctx)
+			else:
+				await do_summon(ci)
+		"one_tower":
+			if _once("one_tower"):
+				var hs: Array = alive_hunters().filter(func(x): return ch[x]["loc"] != "")
+				if not hs.is_empty():
+					var l5 := await pick_loc(ci, "Su quale luogo di un cacciatore mettere la torre di guardia?", hs.map(func(x): return ch[x]["loc"]), true)
+					if l5 != "":
+						await place_tower(l5)
+		"two_towers":
+			if _once("two_towers"):
+				var ls: Array = []
+				for x in alive_hunters():
+					if ch[x]["loc"] != "" and not ls.has(ch[x]["loc"]):
+						ls.append(ch[x]["loc"])
+				for i in range(2):
+					var l6 := await pick_loc(ci, "Torre di guardia sul luogo di un cacciatore (%d/2)" % (i + 1), ls, true)
+					if l6 == "":
+						break
+					ls.erase(l6)
+					await place_tower(l6)
+		"grudge_per_sheep_talent_per_boar":
+			var sh := int(kills.get("sheep", 0))
+			if sh > 0:
+				await gain_grudge(ci, sh, "pecore uccise")
+			for i in range(int(kills.get("boar", 0))):
+				await gain_talent(ci)
+		"farmer_to_noble":
+			if _once("farmer_to_noble"):
+				var fs: Array = settlers.filter(func(s): return s["kind"] == "farmer")
+				if not fs.is_empty():
+					var o := []
+					for s in fs:
+						o.append({"id": str(s["id"]), "label": "Contadino in " + loc_label(s["loc"]), "loc": s["loc"]})
+					var s2 := find_obj(settlers, int(str(await decide(ci, {"type": "settler", "prompt": "Quale Contadino diventa Nobile?", "opts": o}))))
+					s2["kind"] = "noble"
+					ev({"t": "skind", "id": s2["id"], "kind": "noble"})
+					log_msg("Un Contadino diventa Nobile.")
+		"farmers_to_noble_at":
+			if _once("farmers_at"):
+				for s in settlers:
+					if s["kind"] == "farmer" and LOCS[s["loc"]].get("name", "") == str(op[1]):
+						s["kind"] = "noble"
+						ev({"t": "skind", "id": s["id"], "kind": "noble"})
+						log_msg("Un Contadino in %s diventa Nobile." % loc_label(s["loc"]))
+		"free_upgrade":
+			await buy_upgrades(ci, 1, 99)
+		_:
+			return false
+	return true
+
+
+## Naufragio: i cacciatori vincono se alla fine di un turno della Bestia c'è un colono nell'insediamento obiettivo.
+func beast_turn_end(ci: int) -> void:
+	var goal: String = K.get("goal_settlement", "")
+	if goal == "" or game_over:
+		return
+	for s in settlers:
+		if LOCS[s["loc"]].get("name", "") == goal:
+			await end_game("H", "Un colono ha raggiunto %s alla fine del turno della Bestia." % loc_label(s["loc"]))
+			return

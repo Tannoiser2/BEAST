@@ -391,7 +391,8 @@ func move_hunter_to(h: int, t: String, step := true) -> void:
 		return
 	ch[h]["loc"] = t
 	ev({"t": "hmove", "ci": h, "from": from, "to": t, "step": step})
-	if step and is_abyss(from) and is_abyss(t) and not adjacent(from, t, "settlement"):
+	var spire_safe: bool = K.get("abyss_pref", false) and ruins.get("abyssal_spire", "") == "H"
+	if step and not spire_safe and is_abyss(from) and is_abyss(t) and not adjacent(from, t, "settlement"):
 		log_msg("%s attraversa l'abisso e subisce 1 ferita." % cname(h))
 		await damage({"t": "hunter", "ci": h}, 1, {"kind": "abyss"})
 	await refresh_trails()
@@ -687,6 +688,8 @@ func damage(t: Dictionary, n: int, src := {}) -> bool:
 				deaths_today += 1
 				_count_kill(s["kind"], by_beast_attack)
 				_count_kill("settler", by_beast_attack or src.get("kind", "") != "hunter")
+				_count_kill("settler_any", true)
+				_count_kill("settler_in_" + zone_of(s["loc"]), by_beast_attack or src.get("kind", "") != "hunter")
 				ev({"t": "death", "target": t, "loc": s["loc"]})
 				log_msg("[b]Muore un %s in %s.[/b]" % [D.SETTLERS[s["kind"]]["n"], loc_label(s["loc"])])
 				if by_beast_attack:
@@ -773,6 +776,7 @@ func kill_hunter(h: int, src: Dictionary) -> void:
 	var c: Dictionary = ch[h]
 	var by_beast = src.get("kind", "") == "attack" and is_beast(int(src.get("ci", -1)))
 	deaths_today += 1
+	kills["hunter_any"] = int(kills.get("hunter_any", 0)) + 1
 	ev({"t": "death", "target": {"t": "hunter", "ci": h}, "loc": c["loc"]})
 	log_msg("[b]%s è morto.[/b]" % cname(h))
 	if by_beast:

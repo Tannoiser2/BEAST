@@ -511,7 +511,7 @@ func loc_label(l: String) -> String:
 	var L: Dictionary = LOCS[l]
 	var s := ""
 	if L.has("name"):
-		s = str(L["name"]).replace("_", " ").capitalize()
+		s = str(L.get("label", str(L["name"]).replace("_", " ").capitalize()))
 	elif l == center():
 		s = "Centro"
 	else:

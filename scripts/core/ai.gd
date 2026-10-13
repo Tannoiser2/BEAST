@@ -171,7 +171,7 @@ func hunter_goal(eng, h: int) -> String:
 		if v2 > bv2:
 			bv2 = v2
 			best2 = l
-	if level >= 2 and eng.contract_id == "titan" and not eng.settlers.is_empty() and not taken.is_empty():
+	if level >= 1 and _escort(eng) and not eng.settlers.is_empty() and not taken.is_empty():
 		# Titan, Difficile: chi non è assegnato a un'ipotesi buona scorta il colono più lontano dalla meta
 		var far := ""
 		var fd := -1
@@ -272,7 +272,7 @@ func _hunter_value(eng, h: int, o: Dictionary, me: String, ph: float) -> float:
 		v -= 2.0
 	if str(o.get("mode", "")) == "O":
 		v += 0.5
-	if level >= 2 and eng.contract_id == "titan" and k == "action" and str(o.get("mode", "")) in ["R", "O"]:
+	if level >= 1 and _escort(eng) and k == "action" and str(o.get("mode", "")) in ["R", "O"]:
 		v += tv("red")
 	return v
 
@@ -814,9 +814,9 @@ func pick_loc_opt(eng, ci: int, req: Dictionary):
 					v4 -= float(pr2[pl]) / (1.0 + eng.dist(l4, pl))
 			if l4 != "" and not eng.hunters_at(l4).is_empty():
 				v4 += 0.5
-			if eng.contract_id == "titan":
+			if _escort(eng):
 				var cur: String = l4 if l4 != "" else _settler_loc(eng, mover)
-				if eng.titan_hab.has(cur):
+				if _escort_goals(eng).has(cur):
 					v4 += 5.0
 				elif level >= 1:
 					# verso il luogo protetto più vicino ancora da raggiungere
@@ -852,9 +852,21 @@ func _settler_loc(eng, mover: String) -> String:
 
 func _titan_dist(eng, l: String) -> int:
 	var d := 99
-	for t in eng.titan_hab:
+	for t in _escort_goals(eng):
 		d = mini(d, eng.dist(l, t, "settlement"))
 	return d
+
+
+## Contratti in cui i cacciatori scortano i coloni verso una meta (Titan, Naufragio).
+func _escort(eng) -> bool:
+	return eng.contract_id == "titan" or eng.K.get("goal_settlement", "") != ""
+
+
+func _escort_goals(eng) -> Array:
+	if eng.contract_id == "titan":
+		return eng.titan_hab.keys()
+	var g: String = eng.K.get("goal_settlement", "")
+	return eng.LOCS.keys().filter(func(x): return eng.LOCS[x].get("name", "") == g)
 
 
 func pick_target(eng, ci: int, req: Dictionary):

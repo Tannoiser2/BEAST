@@ -45,6 +45,8 @@ func lock_ok(ci: int, cid: String) -> bool:
 		return true
 	if lk == "*":
 		lk = beast_hab(ci)
+	if K.get("abyss_pref", false) and lk == beast_hab(ci) and is_abyss(ch[ci]["loc"]):
+		return true
 	return has_hab(ch[ci]["loc"], lk)
 
 
@@ -1228,9 +1230,9 @@ func before_effect(ci: int, cid: String, m: String, ctx: Dictionary) -> void:
 	# reazioni dei Belati (cacciatore nella zona di Thalduk gioca un'Azione rossa)
 	if not is_beast(ci) and D.kind(cid) == "action" and (m == "R" or m == "O"):
 		await offer_reaction("hunter_red_action_zone", {"ci": ci})
-		if K.get("setup", {}).get("titan", false):
+		if K.get("setup", {}).get("titan", false) or K.get("setup", {}).get("escort", false):
 			for s in settlers.duplicate():
-				if not await settler_step(ci, s, "Titan: puoi muovere il colono di 1 passo"):
+				if not await settler_step(ci, s, "Puoi muovere il colono di 1 passo"):
 					continue
 	if D.is_hunt(cid):
 		await offer_reaction("hunt_played", {"ci": ci})

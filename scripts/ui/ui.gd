@@ -318,7 +318,7 @@ static func mini_view(id: String, sz: Vector2) -> Control:
 	var cam := Camera3D.new()
 	cam.fov = 30
 	var wide: float = max(ab.size.x, ab.size.z) * s
-	var dist: float = max(1.0 / (2.0 * tan(deg_to_rad(15.0))), wide * 1.4)
+	var dist: float = max(1.12 / (2.0 * tan(deg_to_rad(15.0))), wide * 2.3)
 	cam.position = Vector3(0, 0.6, dist)
 	vp.add_child(cam)
 	cam.look_at_from_position(cam.position, Vector3(0, 0.5, 0), Vector3.UP)

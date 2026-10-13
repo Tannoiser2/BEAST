@@ -2,7 +2,8 @@ extends Control
 ## Menu: contratto, numero di giocatori, Bestie e cacciatori (Umano/IA), livello dell'IA, gioco online.
 
 const D = preload("res://scripts/data/bs_data.gd")
-const PLAYABLE := ["regent", "brave", "titan"]
+const PLAYABLE := ["regent", "brave", "titan", "ruins", "release", "alliance", "great_cleansing", "shipwreck", "northern_settlements", "northern_gods"]
+const MAP_ORDER := [["lsi", "Isole inferiori"], ["usi", "Isole superiori"], ["dl", "Terre sommerse"], ["ne", "Distese del Nord"]]
 
 var main
 var contract := "regent"
@@ -56,15 +57,30 @@ func _ready() -> void:
 	cv.add_theme_constant_override("separation", 8)
 	cbox.add_child(cv)
 	cv.add_child(UI.label("Contratto", 28, Color.WHITE, UI.font_bold))
-	var names := []
-	for k in PLAYABLE:
-		names.append(D.CONTRACTS[k]["n"])
-	cv.add_child(_segmented(names, PLAYABLE.find(contract), func(k):
-		contract = PLAYABLE[k]
+	var map_ids: Array = MAP_ORDER.map(func(m): return m[0])
+	var map_names: Array = MAP_ORDER.map(func(m): return m[1])
+	var crow := HBoxContainer.new()
+	var build_contracts := func(mid: String):
+		for c in crow.get_children():
+			c.queue_free()
+		var ks: Array = PLAYABLE.filter(func(k): return D.CONTRACTS[k]["map"] == mid)
+		var nm: Array = ks.map(func(k): return "%s (%s)" % [D.CONTRACTS[k]["n"], "-".join(D.CONTRACTS[k]["players"].map(func(x): return str(x)))])
+		crow.add_child(_segmented_wrap(nm, ks.find(contract), func(k):
+			contract = ks[k]
+			var pl: Array = D.CONTRACTS[contract]["players"]
+			if not pl.has(nplayers):
+				nplayers = pl[0]
+			_refresh()))
+	cv.add_child(_segmented(map_names, map_ids.find(D.CONTRACTS[contract]["map"]), func(k):
+		var mid: String = map_ids[k]
+		contract = PLAYABLE.filter(func(c): return D.CONTRACTS[c]["map"] == mid)[0]
 		var pl: Array = D.CONTRACTS[contract]["players"]
 		if not pl.has(nplayers):
 			nplayers = pl[0]
-		_refresh(), 200))
+		build_contracts.call(mid)
+		_refresh(), 152))
+	cv.add_child(crow)
+	build_contracts.call(D.CONTRACTS[contract]["map"])
 	np_row = HBoxContainer.new()
 	cv.add_child(np_row)
 	var ch := HBoxContainer.new()
@@ -82,13 +98,6 @@ func _ready() -> void:
 	contract_lbl = UI.rich(19)
 	contract_lbl.custom_minimum_size = Vector2(470, 0)
 	ch.add_child(contract_lbl)
-	var miss := []
-	for k in D.CONTRACTS_MISSING:
-		miss.append(D.CONTRACTS_MISSING[k][0])
-	var ml := UI.label("Non disponibili (manca la mappa nel modulo): " + ", ".join(miss) + ".", 16, Color("#8a8676"), UI.font_italic)
-	ml.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	ml.custom_minimum_size = Vector2(620, 0)
-	cv.add_child(ml)
 	cv.add_child(HSeparator.new())
 	cv.add_child(UI.label("Livello IA", 26, Color.WHITE, UI.font_bold))
 	cv.add_child(_segmented(["Facile", "Normale", "Difficile"], level, func(k): level = k, 200))
@@ -275,6 +284,32 @@ func _cycle(is_beast: bool, i: int, k: int) -> void:
 			hunters[i] = cand
 		break
 	_build_slots()
+
+
+## Pulsanti a scelta singola su più righe (nomi lunghi dei contratti).
+func _segmented_wrap(items: Array, cur: int, cb: Callable) -> VBoxContainer:
+	var vb := VBoxContainer.new()
+	vb.add_theme_constant_override("separation", 4)
+	var btns := []
+	for k in range(items.size()):
+		var b := Button.new()
+		b.text = items[k]
+		b.custom_minimum_size = Vector2(620, 40)
+		b.add_theme_font_size_override("font_size", 19)
+		vb.add_child(b)
+		btns.append(b)
+	var paint := func(sel: int):
+		for k in range(btns.size()):
+			var on: bool = k == sel
+			btns[k].add_theme_stylebox_override("normal", UI.panel_style(UI.GOLD if on else Color("#1a1f1c"), UI.GOLD if on else Color("#4a4a3a"), 2, 4))
+			btns[k].add_theme_color_override("font_color", UI.DARK if on else Color("#dddddd"))
+			btns[k].add_theme_color_override("font_hover_color", UI.DARK if on else UI.GOLD)
+	for k in range(btns.size()):
+		btns[k].pressed.connect(func():
+			paint.call(k)
+			cb.call(k))
+	paint.call(cur)
+	return vb
 
 
 func _segmented(items: Array, cur: int, cb: Callable, w := 200) -> HBoxContainer:

@@ -354,7 +354,7 @@ func _loc_text(l: String) -> String:
 		hs.append(D.HAB_IT.get(h, h))
 	var s := "/".join(hs).capitalize()
 	if L.has("name"):
-		s = str(L["name"]).replace("_", " ").capitalize() + " · " + s
+		s = str(L.get("label", str(L["name"]).replace("_", " ").capitalize())) + " · " + s
 	if L["zone"] != "*":
 		s += " · zona " + str(M["zones"][L["zone"]])
 	else:
