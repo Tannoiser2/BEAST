@@ -1,7 +1,7 @@
 class_name BSBelief
 extends RefCounted
 ## Insieme delle posizioni possibili di una Bestia, ricavato SOLO dagli eventi pubblici
-## (mosse coperte, tracce trovate o mancate, perlustrazioni, evocazioni, rivelazioni, Veggenza).
+## (mosse coperte, tracce trovate o mancate, perlustrazioni, evocazioni, rivelazioni, Veggente).
 ## Lo usano l'IA dei cacciatori (per cercarla) e l'IA della Bestia (per sapere quanto è nascosta
 ## e scegliere le mosse che confondono di più).
 ##

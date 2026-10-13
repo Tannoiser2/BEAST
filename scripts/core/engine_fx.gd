@@ -311,7 +311,7 @@ func run_op(ci: int, op: Array, ctx: Dictionary) -> void:
 				var t4 := await pick_loc(ci, "Su quale Banshee spostarti?", bs.map(func(s): return s["loc"]))
 				if t4 != "":
 					secret_relocate(ci, t4)
-					await reveal(ci, "Passo d'ombra")
+					await reveal(ci, "Passo nell'ombra")
 		"rapier":
 			var opts2 := []
 			for d in DIRS:
@@ -601,7 +601,7 @@ func run_op(ci: int, op: Array, ctx: Dictionary) -> void:
 			await do_summon(ci)
 		"summons_mv1":
 			for su in summons_of(ci):
-				await summon_step(ci, su, "Vagare: il %s muove" % D.SUMMONS[su["kind"]]["n"], true)
+				await summon_step(ci, su, "Errare: il %s muove" % D.SUMMONS[su["kind"]]["n"], true)
 		"me_and_summons_mv1":
 			await beast_move(ci, 1, {"upto": true})
 			for su in summons_of(ci):
@@ -671,7 +671,7 @@ func run_op(ci: int, op: Array, ctx: Dictionary) -> void:
 		"near_hunters_mv_or_atk":
 			for l in nearby(me["loc"], "settlement"):
 				for h in hunters_at(l):
-					var r6 = await decide(h, {"type": "choice", "prompt": "Avidità: %s muove di 1 passo o attacca?" % cname(h), "opts": [{"id": "m", "label": "Muovi di 1 passo"}, {"id": "a", "label": "Attacca"}, {"id": "n", "label": "Niente"}], "ask_single": true})
+					var r6 = await decide(h, {"type": "choice", "prompt": "Avarizia: %s muove di 1 passo o attacca?" % cname(h), "opts": [{"id": "m", "label": "Muovi di 1 passo"}, {"id": "a", "label": "Attacca"}, {"id": "n", "label": "Niente"}], "ask_single": true})
 					if str(r6) == "m":
 						await hunter_move(h, 1)
 					elif str(r6) == "a":
@@ -713,7 +713,7 @@ func run_op(ci: int, op: Array, ctx: Dictionary) -> void:
 					if o19.is_empty():
 						break
 					o19.append({"id": "no", "label": "Nessuno"})
-					var h8 = await decide(ci, {"type": "hunter", "prompt": "Comando: quale cacciatore muovi?", "opts": o19, "ask_single": true})
+					var h8 = await decide(ci, {"type": "hunter", "prompt": "Comandare: quale cacciatore muovi?", "opts": o19, "ask_single": true})
 					if str(h8) != "no":
 						await hunter_move(int(str(h8)), 1, {"may": true})
 				else:
@@ -724,7 +724,7 @@ func run_op(ci: int, op: Array, ctx: Dictionary) -> void:
 					if o20.is_empty():
 						break
 					o20.append({"id": "no", "label": "Nessuno"})
-					var s2 = await decide(ci, {"type": "settler", "prompt": "Comando: quale colono muovi?", "opts": o20, "ask_single": true})
+					var s2 = await decide(ci, {"type": "settler", "prompt": "Comandare: quale colono muovi?", "opts": o20, "ask_single": true})
 					if str(s2) != "no":
 						await settler_step(ci, find_obj(settlers, int(str(s2))), "Muovi il colono")
 		"move_settler":
@@ -771,7 +771,7 @@ func run_op(ci: int, op: Array, ctx: Dictionary) -> void:
 				if line2.size() == 2:
 					o24.append({"id": d, "label": "%s → %s" % [D.DIR_IT[d], loc_label(line2[1])], "loc": line2[1]})
 			if not o24.is_empty():
-				var d3 = await decide(ci, {"type": "dir", "prompt": "Zanna: direzione (2 passi)", "opts": o24, "ask_single": true})
+				var d3 = await decide(ci, {"type": "dir", "prompt": "Zannare: direzione (2 passi)", "opts": o24, "ask_single": true})
 				var line3 := line_from(me["loc"], str(d3), 2, "settlement")
 				var over := []
 				for l in line3:
@@ -882,7 +882,7 @@ func run_special(ci: int, op: Array, ctx: Dictionary) -> void:
 	push_warning("Operazione sconosciuta: " + str(op))
 
 
-## Carica selvaggia (Hogbad): 2 passi nella stessa direzione, trasforma, trascina chi incontra.
+## Fuggire (Hogbad): 2 passi nella stessa direzione, trasforma, trascina chi incontra.
 func stampede(b: int) -> void:
 	var c: Dictionary = ch[b]
 	var start: String = c["loc"]
@@ -894,7 +894,7 @@ func stampede(b: int) -> void:
 	if opts.is_empty():
 		await beast_move(b, 2)
 		return
-	var r = await decide(b, {"type": "beast_step", "prompt": "Carica selvaggia: direzione (2 passi)", "opts": opts, "ask_single": true, "secret": true})
+	var r = await decide(b, {"type": "beast_step", "prompt": "Fuggire: direzione (2 passi)", "opts": opts, "ask_single": true, "secret": true})
 	var line2 := line_from(start, str(r), 2, beast_hab(b))
 	var carried := []
 	var batch := []
@@ -916,7 +916,7 @@ func stampede(b: int) -> void:
 	for t in carried:
 		await move_being_to(t, c["loc"])
 	if not carried.is_empty():
-		log_msg("Carica selvaggia: %d esseri travolti." % carried.size())
+		log_msg("Fuggire: %d esseri travolti." % carried.size())
 	await refresh_trails()
 
 
@@ -1245,7 +1245,7 @@ func before_effect(ci: int, cid: String, m: String, ctx: Dictionary) -> void:
 			"stampede":
 				if has_up(ci, "primal_instincts"):
 					for s in summons_of(ci):
-						if s["kind"] == "warhog" and summons.has(s) and await yesno(ci, "Istinti primordiali: il Cinghiale da guerra in %s spinge?" % loc_label(s["loc"])):
+						if s["kind"] == "warhog" and summons.has(s) and await yesno(ci, "Istinti primordiali: il Facocero in %s spinge?" % loc_label(s["loc"])):
 							await push(ci, s)
 
 
@@ -1376,7 +1376,7 @@ func offer_reaction(trigger: String, data: Dictionary) -> bool:
 					continue
 				for c in ch[h]["hand"].duplicate():
 					if D.base_id(c) == "smokebomb" and ch[h]["grudges"] >= 1:
-						if await yesno(h, "La Bestia attacca in %s: giocare Fumogeno (previene 1 danno)?" % loc_label(l), "Gioca Fumogeno", "No", "reaction"):
+						if await yesno(h, "La Bestia attacca in %s: giocare Bomba fumogena (previene 1 danno)?" % loc_label(l), "Gioca Bomba fumogena", "No", "reaction"):
 							if await _react(h, c, data):
 								data["prevent"]["n"] = int(data["prevent"]["n"]) + 1
 							played = true
@@ -1397,7 +1397,7 @@ func offer_reaction(trigger: String, data: Dictionary) -> bool:
 			for h in alive_hunters():
 				for c in ch[h]["hand"].duplicate():
 					if D.base_id(c) == "flare" and ch[h]["grudges"] >= 1:
-						if await yesno(h, "Compare una Traccia dove c'è un colono: giocare Razzo di segnalazione?", "Gioca", "No", "reaction"):
+						if await yesno(h, "Compare una Traccia dove c'è un colono: giocare Fiammata?", "Gioca", "No", "reaction"):
 							await _react(h, c, data)
 							played = true
 						break
@@ -1405,7 +1405,7 @@ func offer_reaction(trigger: String, data: Dictionary) -> bool:
 			for b in beasts():
 				for c in ch[b]["hand"].duplicate():
 					if D.base_id(c) == "intuition" and ch[b]["grudges"] >= 1:
-						if await yesno(b, "È stata giocata Caccia: giocare Intuito (muovi di 1 passo)?", "Gioca", "No", "reaction"):
+						if await yesno(b, "È stata giocata Cacciare: giocare Intuizione (muovi di 1 passo)?", "Gioca", "No", "reaction"):
 							await _react(b, c, data)
 							played = true
 						break

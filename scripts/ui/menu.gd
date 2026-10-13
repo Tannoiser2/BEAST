@@ -3,7 +3,7 @@ extends Control
 
 const D = preload("res://scripts/data/bs_data.gd")
 const PLAYABLE := ["regent", "brave", "titan", "ruins", "release", "alliance", "great_cleansing", "shipwreck", "northern_settlements", "northern_gods"]
-const MAP_ORDER := [["lsi", "Isole inferiori"], ["usi", "Isole superiori"], ["dl", "Terre sommerse"], ["ne", "Distese del Nord"]]
+const MAP_ORDER := [["lsi", "Isole inferiori"], ["usi", "Isole superiori"], ["dl", "Terre inondate"], ["ne", "Distesa del Nord"]]
 
 var main
 var contract := "regent"

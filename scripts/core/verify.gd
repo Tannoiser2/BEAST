@@ -6,7 +6,7 @@ extends RefCounted
 ##  2. ogni gruppo di carte Movimento coperte corrisponda all'hash pubblicato nell'evento «bmove»;
 ##  3. le mosse siano legali (passi fra luoghi collegati, carte false accanto a quelle vere);
 ##  4. tutto ciò che si è visto in partita torni: tracce trovate e mancate, perlustrazioni a vuoto,
-##     rivelazioni, Veggenza, posizione finale.
+##     rivelazioni, Veggente, posizione finale.
 ## Restituisce {"ok": bool, "errors": [testi], "checked": numero di controlli}.
 
 const D = preload("res://scripts/data/bs_data.gd")
@@ -114,7 +114,7 @@ static func run(events: Array, reveal: Dictionary, map_id: String) -> Dictionary
 					checked += 1
 					var idx := int(m2.get("idx", -1))
 					if not active.has(b5) or idx < 0 or idx >= active[b5].size() or str(active[b5][idx]["to"]) != str(m2["to"]):
-						errors.append("Carta Movimento rivelata da Veggenza non coerente (evento %d)." % i)
+						errors.append("Carta Movimento rivelata da Veggente non coerente (evento %d)." % i)
 			"end":
 				for k2 in e.get("beast_locs", {}):
 					checked += 1

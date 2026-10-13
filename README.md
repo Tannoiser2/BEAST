@@ -20,16 +20,16 @@ pubblicamente.
   Iona, Krim, Varja, Eivind con la Fylgja, Valdi con il sangue, Fara, Esmeria cacciatrice promo), con
   abilità, potenziamenti rossi/blu e gialli, Talenti bestiali, Oggetti del cacciatore, trappole, torri di
   guardia, carte Azione con il draft dell'alba, carte Caccia e Tracciamento, evocazioni (Polipo, Lupo,
-  Banshee, Basilisco, Mutaforma, Sognatore, Abominio, Ammiratore, Cinghiale da guerra) e le Rovine.
+  Banshee, Basilisco, Mutaforma, Sognatore, Abominio, Ammiratore, Facocero) e le Rovine.
 - **Tutte e quattro le mappe e tutti i 10 contratti**, scelti nel menu per mappa:
   - *Isole Frantumate inferiori*: *Reggente delle rovine* (2–3, contatore del Dominio), *Un patto
     dimenticato* (4), *L'arrivo della Titan* (5, due Bestie, coloni da scortare).
   - *Isole Frantumate superiori*: *Segreti di un'era perduta* (2–3), *Liberare l'Abisso* (4, palude
     abissale come habitat preferito, Guglia abissale che protegge i cacciatori), *Un'alleanza improbabile*
     (5, due Bestie, coloni con l'Armatura).
-  - *Terre sommerse*: *La Grande Purificazione* (2–3), *Naufragio* (2–3, due Contadini da scortare dal
+  - *Terre inondate*: *La Grande Purificazione* (2–3), *Naufragio* (2–3, due Contadini da scortare dal
     relitto a Tiveden).
-  - *Distese del Nord*: *Attacco agli insediamenti del Nord* (4) e *Il risveglio degli dèi del Nord* (4),
+  - *Distesa del Nord*: *Attacco agli insediamenti del Nord* (4) e *I tumulti degli dèi del Nord* (4),
     con tre Notti.
   Notti con richieste e ricompense del contratto, Notte finale, condizioni di vittoria.
 - **Movimento nascosto gestito dal motore**: la Bestia sceglie le carte Movimento (anche false) e le
@@ -134,13 +134,17 @@ segreti, 0 accessi negati, verifica superata, anche con uscita e rientro a metà
 ## Carte sostituibili e testi
 - Tutte le immagini di carte, schede e contratti passano da `assets/cards/manifest.json` (id carta →
   immagine). Le immagini inglesi del modulo sono in `assets/cards/en/`.
-- **Per usare carte in italiano** basta mettere un file con lo stesso nome in `assets/cards/it/`
-  (`.webp`, `.png` o `.jpg`): ha la precedenza su quello inglese, senza toccare il codice.
+- **Carte e schede in italiano (gioco base)**: in `assets/cards/it/` ci sono le scansioni dell'edizione
+  italiana, ritagliate e raddrizzate sulla geometria delle carte inglesi: 16 carte Azione, 25 Oggetti,
+  24 Talenti, 42 carte Abilità di Bestie e cacciatori, i 3 dorsi, le 6 schede Bestia, le 6 schede
+  cacciatore e i 4 contratti delle mappe del gioco base. Un file in `it/` ha la precedenza su quello
+  inglese con lo stesso nome; il resto (espansione, Decadimento improvviso, schede della storia) resta in inglese.
+  Anche i nomi delle carte nel gioco seguono l'edizione italiana (Cacciare, Tracciare, Facocero, Strozzalupo…).
 - I testi delle regole delle carte (Azioni, abilità, potenziamenti, Oggetti, Talenti, contratti,
   evocazioni) sono tradotti in italiano in `scripts/data/bs_data.gd` e sono quelli mostrati nel gioco.
 
 ### Gioco base e espansione
-- **Gioco base** — Bestie: Bolgin (evoca Polipo), Fangrir (Lupo), Mara (Banshee), Raaga (Basilisco), Hogbad (Cinghiale da guerra), Esmeria (Mutaforma). Cacciatori: Assar, Grimgeir, Helga, Iona, Krim, Varja.
+- **Gioco base** — Bestie: Bolgin (evoca Polipo), Fangrir (Lupo), Mara (Banshee), Raaga (Basilisco), Hogbad (Facocero), Esmeria (Mutaforma). Cacciatori: Assar, Grimgeir, Helga, Iona, Krim, Varja.
 - **Isole Frantumate (Shattered Isles)** — Bestie: Vacker (Ammiratore), Thalduk (Yagi), Akkeron (Abominio), Re Piumato (Sognatore). Cacciatori: Eivind, Valdi, Fara, Esmeria capitana.
 - Nel menu ogni personaggio ha l'etichetta «GIOCO BASE» o «ISOLE FRANTUMATE»; se esiste la miniatura 3D, al posto dell'immagine compare il modello che ruota.
 
@@ -170,7 +174,7 @@ Nel menu di scelta i personaggi con la miniatura compaiono in 3D al posto dell'i
 Lo Yagi nell'illustrazione ha solo la testa: il corpo è stato completato nello stesso stile.
 
 ## Cosa manca
-- Le carte in italiano (si aggiungono in `assets/cards/it/`).
+- Le carte italiane dell'espansione Isole Frantumate (si aggiungono in `assets/cards/it/` con lo stesso nome del file inglese).
 
 ## Struttura
 ```
@@ -204,7 +208,7 @@ perdita per le carte), pacchetto di circa 45 MB.
 - **Contratti**: ricompense e richieste delle Notti trascritte dalle carte contratto del modulo; dove la
   carta è ambigua: «controllare 2 Rovine» si valuta nel momento del danno; i segnalini della Titan passano
   sul contratto all'inizio del turno di qualsiasi cacciatore; la Notte finale arriva dopo l'ultima Notte del contratto (la seconda, o la terza
-  nelle Distese del Nord).
+  nelle Distesa del Nord).
 - **Nuove mappe**: luoghi, habitat, sentieri con le direzioni, animali e coloni ricavati dalle immagini delle
   mappe. Icone delle carte contratto: la spada è un Potere antico, la mano artigliata è Evoca, la maschera
   grigia è l'Armatura dei coloni. Le ricompense dei cacciatori che valgono per la squadra (torri, Contadino

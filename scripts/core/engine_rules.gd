@@ -278,7 +278,7 @@ func on_revealed(b: int) -> void:
 				animals.erase(a)
 				summons.append({"id": new_id(), "owner": b, "kind": "warhog", "loc": a["loc"], "wounds": 0})
 				ev({"t": "summon", "ci": b, "kind": "warhog", "loc": a["loc"]})
-				log_msg("Radunare: un Cinghiale diventa Cinghiale da guerra.")
+				log_msg("Radunare: un Cinghiale diventa Facocero.")
 	if ch[b].get("reborn", false):
 		for s in nearby(l):
 			if has_hab(s, "settlement") and summons_of(b).size() < 3:
@@ -292,7 +292,7 @@ func on_revealed(b: int) -> void:
 				if D.is_track(a):
 					ch[h]["abil_disc"].erase(a)
 					ch[h]["hand"].append(a)
-					log_msg("Segugio eccezionale: %s riprende Seguire le tracce." % cname(h))
+					log_msg("Segugio eccezionale: %s riprende Tracciare." % cname(h))
 
 
 ## Perlustra il luogo l: se una Bestia nascosta è lì, si rivela.
@@ -594,7 +594,7 @@ func attack(ci: int, o := {}) -> Dictionary:
 	var tl: String = being_loc(tgt) if tgt["t"] != "tower" else str(tgt["loc"])
 	ev({"t": "attack", "ci": ci, "loc": tl, "target": tgt, "dmg": dmg})
 	log_msg("%s attacca %s." % [cname(ci), target_label(tgt)])
-	# reazioni all'attacco della Bestia (Fumogeno, Legame antico, Difensore, armatura)
+	# reazioni all'attacco della Bestia (Bomba fumogena, Legame antico, Difensore, armatura)
 	if is_beast(ci):
 		var prev := {"n": 0}
 		await offer_reaction("beast_attack_near", {"loc": tl, "prevent": prev, "target": tgt})
@@ -1097,7 +1097,7 @@ func summon_ability(b: int, su: Dictionary) -> void:
 
 
 func wolf_charge(b: int, su: Dictionary) -> void:
-	var r = await decide(b, {"type": "order", "prompt": "Carica del Lupo", "opts": [{"id": "am", "label": "Attacca, poi muovi"}, {"id": "ma", "label": "Muovi, poi attacca"}], "ask_single": true})
+	var r = await decide(b, {"type": "order", "prompt": "Caricare del Lupo", "opts": [{"id": "am", "label": "Attacca, poi muovi"}, {"id": "ma", "label": "Muovi, poi attacca"}], "ask_single": true})
 	if str(r) == "am":
 		await summon_attack(b, su)
 		if summons.has(su):
@@ -1114,7 +1114,7 @@ func wolf_charge_after(b: int) -> void:
 	var opts := [{"id": "no", "label": "Nessun Lupo"}]
 	for w in wolves:
 		opts.append({"id": str(w["id"]), "label": "Lupo in " + loc_label(w["loc"]), "loc": w["loc"]})
-	var r = await decide(b, {"type": "summon_pick", "prompt": "Grande ululato: un Lupo può usare Carica", "opts": opts, "ask_single": true})
+	var r = await decide(b, {"type": "summon_pick", "prompt": "Grande ululato: un Lupo può usare Caricare", "opts": opts, "ask_single": true})
 	if str(r) != "no":
 		await wolf_charge(b, find_obj(summons, int(str(r))))
 
@@ -1130,7 +1130,7 @@ func lure(b: int, l: String) -> void:
 	log_msg("Richiamo: gli esseri vicini sono attirati in %s." % loc_label(l))
 
 
-## Spinta del Cinghiale da guerra: 2 passi nella stessa direzione portando con sé chi incontra.
+## Spinta del Facocero: 2 passi nella stessa direzione portando con sé chi incontra.
 func push(b: int, su: Dictionary) -> void:
 	var opts := []
 	for d in DIRS:
@@ -1139,7 +1139,7 @@ func push(b: int, su: Dictionary) -> void:
 			opts.append({"id": d, "label": "%s → %s" % [D.DIR_IT[d], loc_label(line[1])], "loc": line[1]})
 	if opts.is_empty():
 		return
-	var r = await decide(b, {"type": "dir", "prompt": "Spinta: direzione", "opts": opts, "ask_single": true})
+	var r = await decide(b, {"type": "dir", "prompt": "Spingere: direzione", "opts": opts, "ask_single": true})
 	var line2 := line_from(su["loc"], str(r), 2, beast_hab(b))
 	var carried := []
 	for t in beings_at(su["loc"], false):
@@ -1152,7 +1152,7 @@ func push(b: int, su: Dictionary) -> void:
 		await move_being_to({"t": "summon", "id": su["id"]}, l)
 	for t in carried:
 		await move_being_to(t, su["loc"])
-	log_msg("Spinta del Cinghiale da guerra fino a %s." % loc_label(su["loc"]))
+	log_msg("Spinta del Facocero fino a %s." % loc_label(su["loc"]))
 
 
 ## Cozzata: muovi fino a 1 passo; sposta un cacciatore/animale/colono del luogo in un luogo vicino.
@@ -1311,7 +1311,7 @@ func trigger_traps(b: int) -> void:
 					await beast_discard(b, 2)
 				"shriek":
 					for hh in alive_hunters():
-						await hunter_move(hh, 2, {"upto": true, "label": "Trappola urlante: %s può muovere" % cname(hh)})
+						await hunter_move(hh, 2, {"upto": true, "label": "Trappola straziante: %s può muovere" % cname(hh)})
 				"ritual":
 					var opts := []
 					for s in settlers:
