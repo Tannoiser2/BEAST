@@ -22,6 +22,7 @@ var pieces := {}                     # chiave -> Node3D
 var tweens := {}
 var marks: Node3D
 var fx_root: Node3D
+var fx_live := {}                    # luogo -> scritte fluttuanti ancora visibili
 var highlights := {}                 # luogo -> anello
 var hl_locs: Array = []
 var view: Dictionary = {}
@@ -547,6 +548,8 @@ func _process(_d: float) -> void:
 
 func update_view(v: Dictionary) -> void:
 	view = v
+	if replay_on:
+		return
 	var seen := {}
 	var team: String = v.get("team", "P")
 	# segnalini habitat
@@ -699,6 +702,7 @@ func _make_move_card(face: String) -> Node3D:
 	if face != "":
 		var lb := Label3D.new()
 		lb.text = face
+		lb.font = UI.font_bold
 		lb.font_size = 48
 		lb.pixel_size = 0.003
 		lb.modulate = Color("#401010")
@@ -716,10 +720,13 @@ func _set_hidden(n: Node3D, hidden: bool) -> void:
 			var lb := Label3D.new()
 			lb.name = "q"
 			lb.text = "?"
+			lb.font = UI.font_bold
 			lb.font_size = 160
 			lb.pixel_size = 0.004
 			lb.modulate = Color("#ffcf6a")
-			lb.outline_size = 24
+			lb.outline_size = 14
+			lb.outline_render_priority = 0
+			lb.render_priority = 1
 			lb.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 			lb.position.y = 1.45
 			n.add_child(lb)
@@ -755,16 +762,28 @@ func _set_wounds(n: Node3D, w: int, armor := 0) -> void:
 func fx_text(l: String, text: String, col := Color("#ffcf6a")) -> void:
 	if not M["locs"].has(l):
 		return
+	# più scritte nello stesso luogo a breve distanza (rivelata due volte, ricerca e attacco…) si
+	# sovrapponevano e diventavano illeggibili: la stessa scritta non si ripete, le altre si impilano
+	var live: Array = (fx_live.get(l, []) as Array).filter(func(x): return is_instance_valid(x))
+	for x in live:
+		if x.text == text:
+			return
+	fx_live[l] = live
 	var lb := Label3D.new()
+	live.append(lb)
 	lb.text = text
-	lb.font_size = 72
+	# font del gioco (quello di sistema si vedeva male: lettere sovrapposte) e bordo sottile disegnato prima
+	lb.font = UI.font_bold
+	lb.font_size = 64
 	lb.pixel_size = 0.005
 	lb.modulate = col
-	lb.outline_size = 18
-	lb.outline_modulate = Color(0, 0, 0, 0.9)
+	lb.outline_size = 8
+	lb.outline_modulate = Color(0, 0, 0, 0.85)
+	lb.render_priority = 2
+	lb.outline_render_priority = 1
 	lb.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	lb.no_depth_test = true
-	lb.position = loc_pos(l) + Vector3(0, 1.4, 0)
+	lb.position = loc_pos(l) + Vector3(0, 1.4 + 0.42 * (live.size() - 1), 0)
 	fx_root.add_child(lb)
 	var tw := create_tween()
 	tw.tween_property(lb, "position", lb.position + Vector3(0, 0.8, 0), 1.6)
@@ -812,3 +831,169 @@ func show_path(moves: Array, col := Color("#ff6a3a")) -> void:
 		var tw := create_tween()
 		tw.tween_interval(6.0)
 		tw.tween_callback(mi.queue_free)
+
+
+# ================================================================== replay di fine partita
+
+var replay_on := false
+var rp := {}                         # chiave -> pezzo
+var rp_loc := {}                     # chiave -> luogo
+var rp_order: Array = []             # ordine d'arrivo (per disporre i pezzi nello stesso luogo)
+var rp_marks: Node3D
+const RP_COL := [Color("#e8321a"), Color("#8a2be2")]
+
+
+## Svuota il tavolo dai pezzi della partita: il replay mette i suoi.
+func replay_start() -> void:
+	replay_stop()
+	replay_on = true
+	for k in pieces:
+		if is_instance_valid(pieces[k]):
+			pieces[k].visible = false
+	for l in highlights:
+		if is_instance_valid(highlights[l]):
+			highlights[l].visible = false
+	for c in marks.get_children():
+		c.visible = false
+	rp_marks = Node3D.new()
+	add_child(rp_marks)
+
+
+func replay_stop() -> void:
+	for k in rp:
+		if is_instance_valid(rp[k]):
+			rp[k].queue_free()
+	rp.clear()
+	rp_loc.clear()
+	rp_order.clear()
+	if rp_marks != null and is_instance_valid(rp_marks):
+		rp_marks.queue_free()
+	rp_marks = null
+	if replay_on:
+		replay_on = false
+		for k in pieces:
+			if is_instance_valid(pieces[k]):
+				pieces[k].visible = true
+		for c in marks.get_children():
+			c.visible = true
+		var v := view
+		view = {}
+		update_view(v)
+
+
+func rp_add(key: String, piece: Dictionary, loc: String, dur: float) -> void:
+	if rp.has(key) or not M["locs"].has(loc):
+		return
+	var id: String = piece.get("id", "")
+	var n: Node3D
+	match str(piece.get("kind", "")):
+		"beast":
+			n = make_standee(id, "standee_" + id, 1.15, Color("#5a1f1a"))
+		"hunter":
+			n = make_standee(id, "standee_" + id, 0.92, Color("#1f3e4a"))
+		"companion":
+			n = make_standee("fylgja", "standee_fylgja", 0.55, Color("#1f3e4a"))
+		"animal":
+			n = make_meeple(id, 0.40 if id != "sheep" else 0.32)
+		"settler":
+			n = make_meeple(id, 0.5)
+		_:
+			n = make_standee(id, "standee_" + id, 0.62, Color("#5a1f1a"))
+	add_child(n)
+	rp[key] = n
+	rp_loc[key] = loc
+	rp_order.append(key)
+	n.position = loc_pos(loc)
+	n.scale = Vector3.ONE * 0.01
+	var tw := create_tween()
+	tw.tween_property(n, "scale", Vector3.ONE, max(0.05, dur))
+	_rp_layout(loc, dur, "")
+
+
+func rp_move(key: String, to: String, dur: float, beast := -1, jump := false) -> void:
+	if not rp.has(key) or not M["locs"].has(to):
+		return
+	var from: String = rp_loc[key]
+	rp_loc[key] = to
+	rp_order.erase(key)
+	rp_order.append(key)
+	var n: Node3D = rp[key]
+	var dest := _rp_slot(to, key)
+	if tweens.has(n) and tweens[n].is_valid():
+		tweens[n].kill()
+	var tw := create_tween()
+	if jump:
+		tw.tween_property(n, "scale", Vector3.ONE * 0.01, dur * 0.4)
+		tw.tween_callback(func(): n.position = dest)
+		tw.tween_property(n, "scale", Vector3.ONE, dur * 0.4)
+	else:
+		# arco morbido: sale un poco a metà strada
+		var a := n.position
+		tw.tween_method(func(t: float):
+			if is_instance_valid(n):
+				n.position = a.lerp(dest, t) + Vector3(0, sin(t * PI) * 0.28, 0), 0.0, 1.0, dur).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	tweens[n] = tw
+	if beast >= 0 and not jump:
+		_rp_segment(from, to, RP_COL[beast % RP_COL.size()], dur)
+	_rp_layout(from, dur, "")
+	_rp_layout(to, dur, key)
+
+
+func rp_del(key: String, dur: float) -> void:
+	if not rp.has(key):
+		return
+	var n: Node3D = rp[key]
+	var l: String = rp_loc[key]
+	rp.erase(key)
+	rp_loc.erase(key)
+	rp_order.erase(key)
+	var tw := create_tween()
+	tw.tween_property(n, "scale", Vector3.ONE * 0.01, max(0.05, dur))
+	tw.tween_callback(n.queue_free)
+	_rp_layout(l, dur, "")
+
+
+## Posto del pezzo key nel luogo l (i pezzi presenti si dispongono a cerchio).
+func _rp_slot(l: String, key: String) -> Vector3:
+	var here := rp_order.filter(func(k): return rp_loc.get(k, "") == l)
+	var i := here.find(key)
+	return slot(l, max(0, i), here.size(), 0.34 if here.size() < 5 else 0.42)
+
+
+func _rp_layout(l: String, dur: float, skip: String) -> void:
+	for k in rp_order:
+		if k == skip or rp_loc.get(k, "") != l:
+			continue
+		var n: Node3D = rp[k]
+		var p := _rp_slot(l, k)
+		if n.position.distance_to(p) < 0.01:
+			continue
+		var tw := create_tween()
+		tw.tween_property(n, "position", p, max(0.05, dur * 0.6)).set_trans(Tween.TRANS_SINE)
+
+
+## Tratto del percorso della Bestia, che si allunga mentre lei si muove.
+func _rp_segment(from: String, to: String, col: Color, dur: float) -> void:
+	if rp_marks == null:
+		return
+	var a := loc_pos(from) + Vector3(0, 0.07, 0)
+	var b := loc_pos(to) + Vector3(0, 0.07, 0)
+	var mi := MeshInstance3D.new()
+	var bm := BoxMesh.new()
+	bm.size = Vector3(0.1, 0.03, 1.0)
+	mi.mesh = bm
+	# colore pieno, senza luci: sulla mappa chiara un materiale illuminato sembrava bianco
+	var mat := StandardMaterial3D.new()
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.albedo_color = col
+	mi.material_override = mat
+	rp_marks.add_child(mi)
+	mi.position = a
+	mi.look_at(b, Vector3.UP)
+	var L := a.distance_to(b)
+	mi.scale = Vector3(1, 1, 0.001)
+	var tw := create_tween()
+	tw.tween_method(func(t: float):
+		if is_instance_valid(mi):
+			mi.scale = Vector3(1, 1, max(0.001, L * t))
+			mi.position = a.lerp(b, t * 0.5), 0.0, 1.0, max(0.05, dur))

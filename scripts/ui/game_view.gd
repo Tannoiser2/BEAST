@@ -244,10 +244,16 @@ func _build_hud() -> void:
 	hud.add_child(zoom_txt)
 
 
-func _gui_input_passthrough(ev: InputEvent) -> void:
-	table.handle_input(ev)
+## Il mouse sul tavolo: la vista è un Control a tutto schermo, quindi i clic e la rotella che non
+## finiscono su un pannello arrivano qui (non in _unhandled_input) e si passano alla telecamera.
+func _gui_input(ev: InputEvent) -> void:
+	if is_instance_valid(pass_screen) or is_instance_valid(modal):
+		return
+	if table.handle_input(ev):
+		accept_event()
 
 
+## La tastiera (e il mouse se un giorno la vista non fosse più un Control che lo riceve).
 func _unhandled_input(ev: InputEvent) -> void:
 	if is_instance_valid(pass_screen) or is_instance_valid(modal):
 		return
@@ -405,7 +411,8 @@ func _refresh_chars() -> void:
 			info2 += " · salta il turno"
 		vb.add_child(UI.label(info2, 16, Color("#a8a290")))
 		var who := "IA" if c.get("ai", true) else str(c.get("player", ""))
-		vb.add_child(UI.label(("%s · %d potenziamenti" % [who if who != "" else "umano", c["upg"].size()]), 15, Color("#8a8676")))
+		vb.add_child(UI.label(who if who != "" else "umano", 15, Color("#8a8676")))
+		vb.add_child(_chips(c))
 		p.mouse_filter = Control.MOUSE_FILTER_STOP
 		p.tooltip_text = _upgrades_text(c)
 		var ci: int = c["i"]
@@ -413,6 +420,70 @@ func _refresh_chars() -> void:
 			if ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT:
 				_show_board(ci))
 		chars_box.add_child(p)
+
+
+## Abilità e potenziamenti del personaggio, a colpo d'occhio:
+##  - abilità pronte: bordo del colore della squadra; già usate oggi: spente con «usata»;
+##    della Bestia ferme perché non è nel suo habitat: «bloccata» (lo vede solo chi conosce la posizione);
+##  - potenziamenti sbloccati: ★ su fondo oro. Passa il mouse su una voce per il testo.
+func _chips(c: Dictionary) -> Control:
+	var fl := HFlowContainer.new()
+	fl.custom_minimum_size = Vector2(214, 0)
+	fl.add_theme_constant_override("h_separation", 4)
+	fl.add_theme_constant_override("v_separation", 3)
+	fl.mouse_filter = Control.MOUSE_FILTER_PASS
+	var data: Dictionary = D.BEASTS[c["id"]] if c["side"] == "B" else D.HUNTERS[c["id"]]
+	var used := {}
+	for a in c.get("abil_disc", []):
+		used[D.base_id(str(a))] = true
+	var col := UI.team_col(c["side"])
+	for aid in data.get("abil", []):
+		var card := D.card(aid)
+		var state := ""
+		if used.has(aid):
+			state = "usata"
+		elif c["side"] == "B" and c.has("loc") and str(card.get("lock", "")) != "":
+			var lk: String = card["lock"]
+			if lk == "*":
+				lk = str(data["hab"])
+			if not _loc_habs(str(c["loc"])).has(lk):
+				state = "bloccata"
+		var txt := str(card.get("n", aid)) + ("" if state == "" else " · " + state)
+		var tip := "%s\n%s" % [card.get("n", aid), card.get("t", card.get("bt", card.get("ht", "")))]
+		if state == "usata":
+			tip += "\n(già usata oggi: torna in mano di notte)"
+		elif state == "bloccata":
+			tip += "\n(si gioca solo in un luogo %s)" % D.HAB_IT.get(card["lock"] if card["lock"] != "*" else data["hab"], "")
+		fl.add_child(_chip(txt, tip, Color("#151a17"), col if state == "" else Color("#3a3a36"), Color("#e8e2d0") if state == "" else Color("#77736a")))
+	var ups: Dictionary = data.get("up", {})
+	for u in c.get("upg", []):
+		if ups.has(u):
+			fl.add_child(_chip("★ " + str(ups[u][0]), "%s (potenziamento sbloccato)\n%s" % [ups[u][0], ups[u][3]], Color("#5a4718"), Color("#d8b25a"), Color("#fff1c8")))
+	return fl
+
+
+func _chip(text: String, tip: String, bg: Color, border: Color, fg: Color) -> Control:
+	var pc := PanelContainer.new()
+	var sb := UI.panel_style(bg, border, 1, 4)
+	sb.content_margin_left = 5
+	sb.content_margin_right = 5
+	sb.content_margin_top = 1
+	sb.content_margin_bottom = 1
+	pc.add_theme_stylebox_override("panel", sb)
+	var lb := UI.label(text, 14, fg, UI.font_bold)
+	lb.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	pc.add_child(lb)
+	pc.tooltip_text = tip
+	pc.mouse_filter = Control.MOUSE_FILTER_PASS
+	return pc
+
+
+func _loc_habs(l: String) -> Array:
+	var tk: Dictionary = view.get("tokens", {})
+	if tk.has(l):
+		return ["swamp", "abyss"] if tk[l] == "abyss" else [tk[l]]
+	var locs: Dictionary = D.MAPS[view.get("map", "lsi")]["locs"]
+	return locs[l]["hab"] if locs.has(l) else []
 
 
 func _upgrades_text(c: Dictionary) -> String:
@@ -879,15 +950,147 @@ func _on_end(res: Dictionary) -> void:
 	UI.primary(b)
 	b.pressed.connect(func(): main.show_menu())
 	hb.add_child(b)
+	var b3 := Button.new()
+	b3.text = "RIVEDI LA PARTITA"
+	b3.tooltip_text = "Replay continuo con la Bestia sempre visibile e il suo percorso sulla mappa."
+	b3.custom_minimum_size = Vector2(300, 60)
+	UI.primary(b3)
+	b3.pressed.connect(func(): _replay_open(res, evs, box))
+	hb.add_child(b3)
 	var b2 := Button.new()
 	b2.text = "GUARDA IL TAVOLO"
-	b2.custom_minimum_size = Vector2(300, 60)
-	b2.pressed.connect(func(): box.visible = false)
+	b2.custom_minimum_size = Vector2(260, 60)
+	b2.pressed.connect(func():
+		box.visible = false
+		_back_button(box))
 	hb.add_child(b2)
 	# percorso segreto della Bestia
 	for e in res.get("reveal", {}).get("log", []):
 		if e.has("moves"):
 			table.show_path(e["moves"])
+
+
+## Pulsante per tornare al riepilogo dopo «Guarda il tavolo».
+func _back_button(box: Control) -> void:
+	var bb := Button.new()
+	bb.text = "RISULTATI"
+	bb.custom_minimum_size = Vector2(200, 50)
+	UI.primary(bb)
+	bb.position = Vector2(size.x / 2 - 100, size.y - 300)
+	end_panel.add_child(bb)
+	bb.pressed.connect(func():
+		box.visible = true
+		bb.queue_free())
+
+
+# ================================================================== replay
+
+var rp_bar: Control
+var rp_lbl: Label
+var rp_steps: Array = []
+var rp_i := 0
+var rp_speed := 1.0
+var rp_paused := false
+var rp_run := 0                     # cambia a ogni avvio: ferma il ciclo precedente
+var rp_pause_btn: Button
+var rp_speed_btn: Button
+
+
+func _replay_open(res: Dictionary, evs: Array, box: Control) -> void:
+	var chars: Array = view.get("chars", [])
+	rp_steps = BSReplay.build(evs, res.get("reveal", {}), D.CONTRACTS[view.get("contract", "regent")]["map"], chars)
+	box.visible = false
+	hud.visible = false
+	table.reset_camera()
+	rp_bar = PanelContainer.new()
+	rp_bar.add_theme_stylebox_override("panel", UI.panel_style(Color("#0d110fe8"), UI.GOLD, 2, 10))
+	rp_bar.position = Vector2(size.x / 2 - 470, size.y - 120)
+	rp_bar.custom_minimum_size = Vector2(940, 0)
+	end_panel.add_child(rp_bar)
+	var hb := HBoxContainer.new()
+	hb.add_theme_constant_override("separation", 12)
+	rp_bar.add_child(hb)
+	rp_lbl = UI.label("", 24, Color.WHITE, UI.font_bold)
+	rp_lbl.custom_minimum_size = Vector2(300, 0)
+	hb.add_child(rp_lbl)
+	rp_pause_btn = _rp_button("PAUSA", func():
+		rp_paused = not rp_paused
+		rp_pause_btn.text = "RIPRENDI" if rp_paused else "PAUSA")
+	hb.add_child(rp_pause_btn)
+	rp_speed_btn = _rp_button("VELOCITÀ ×1", func():
+		rp_speed = {1.0: 2.0, 2.0: 4.0, 4.0: 0.5, 0.5: 1.0}.get(rp_speed, 1.0)
+		rp_speed_btn.text = "VELOCITÀ ×%s" % (str(int(rp_speed)) if rp_speed >= 1.0 else "½"))
+	hb.add_child(rp_speed_btn)
+	hb.add_child(_rp_button("RICOMINCIA", func(): _replay_play()))
+	hb.add_child(_rp_button("CHIUDI", func(): _replay_close(box)))
+	_replay_play()
+
+
+func _rp_progress() -> float:
+	return float(rp_i) / max(1, rp_steps.size())
+
+
+func _rp_button(t: String, f: Callable) -> Button:
+	var b := Button.new()
+	b.text = t
+	b.custom_minimum_size = Vector2(140, 52)
+	b.pressed.connect(f)
+	return b
+
+
+func _replay_close(box: Control) -> void:
+	rp_run += 1
+	table.replay_stop()
+	if is_instance_valid(rp_bar):
+		rp_bar.queue_free()
+	hud.visible = true
+	box.visible = true
+
+
+## Il replay scorre senza fermarsi ai turni: i passi si susseguono, ognuno con una breve animazione.
+func _replay_play() -> void:
+	rp_run += 1
+	var run := rp_run
+	rp_paused = false
+	if is_instance_valid(rp_pause_btn):
+		rp_pause_btn.text = "PAUSA"
+	table.replay_start()
+	rp_i = 0
+	var day_txt := "Inizio"
+	var n := rp_steps.size()
+	for i in range(n):
+		while rp_paused and run == rp_run:
+			await get_tree().create_timer(0.1).timeout
+		if run != rp_run or not is_inside_tree():
+			return
+		var st: Dictionary = rp_steps[i]
+		var wait := 0.0
+		match str(st["k"]):
+			"add":
+				table.rp_add(st["key"], st["piece"], st["loc"], 0.25 / rp_speed)
+				wait = 0.08
+			"move":
+				var beast := int(st.get("beast", -1))
+				wait = (0.55 if beast >= 0 else 0.32)
+				table.rp_move(st["key"], st["to"], wait / rp_speed, beast)
+			"jump":
+				table.rp_move(st["key"], st["to"], 0.4 / rp_speed, -1, true)
+				wait = 0.4
+			"del":
+				table.rp_del(st["key"], 0.35 / rp_speed)
+				wait = 0.2
+			"fx":
+				table.fx_ring(st["loc"], Color(st["col"]))
+				table.fx_text(st["loc"], st["text"], Color(st["col"]))
+				wait = 0.3
+			"day":
+				day_txt = st["text"]
+				wait = 0.6
+		rp_i = i + 1
+		if is_instance_valid(rp_lbl):
+			rp_lbl.text = "%s · %d%%" % [day_txt, int(100.0 * (i + 1) / max(1, n))]
+		if wait > 0.0:
+			await get_tree().create_timer(wait / rp_speed).timeout
 
 
 func _remote_events_all() -> Array:

@@ -31,6 +31,14 @@ const { chromium } = require('playwright');
   await page.mouse.click(1280 * pos[0], 720 * pos[1]);
   await page.waitForTimeout(40000);
   await page.screenshot({ path: out + '_partita.png', timeout: 180000 }).catch((e) => logs.push('screenshot lento: ' + e.message.split('\n')[0]));
+  // il tavolo deve rispondere al mouse: trascinamento col destro e rotella
+  await page.mouse.move(640, 300);
+  await page.mouse.down({ button: 'right' });
+  for (let i = 1; i <= 8; i++) await page.mouse.move(640 + i * 25, 300 + i * 6);
+  await page.mouse.up({ button: 'right' });
+  for (let i = 0; i < 4; i++) await page.mouse.wheel(0, -120);
+  await page.waitForTimeout(15000);
+  await page.screenshot({ path: out + '_camera.png', timeout: 180000 }).catch((e) => logs.push('screenshot lento: ' + e.message.split('\n')[0]));
   await browser.close();
   const bad = errors.filter((e) => !/favicon/.test(e));
   console.log(logs.slice(-15).join('\n'));
