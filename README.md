@@ -138,11 +138,16 @@ python3 meshy/genera_miniature.py bolgin wolf # solo alcune
 Le immagini di riferimento sono in `meshy/riferimenti/` (le sagome del modulo, con lo sfondo trasparente).
 Dopo, riapri il progetto in Godot (o fai il push: la action di GitHub importa i modelli da sola).
 
-**Miniature da fare (30):**
-- Cacciatori: assar, grimgeir, helga, iona, krim, varja, eivind, valdi, fara, esmeria_h
-- Bestie: bolgin, fangrir, mara, raaga, hogbad, esmeria, vacker, thalduk, akkeron, fk (Re Piumato)
-- Evocati e compagni: abomination, admirer, banshee, basilisk, changeling, dreamer, polyp, warhog, wolf,
-  fylgja
+**Miniature già fatte (13)**, generate con Meshy dalle sagome del modulo:
+- Cacciatori del gioco base: assar, grimgeir, helga, iona, krim, varja
+- Bestie: esmeria
+- Evocati: banshee, basilisk, polyp, warhog, wolf
+- Torre di guardia: watchtower
+
+**Miniature da fare (18):**
+- Cacciatori: eivind, valdi, fara, esmeria_h
+- Bestie: bolgin, fangrir, mara, raaga, hogbad, vacker, thalduk, akkeron, fk (Re Piumato)
+- Evocati e compagni: abomination, admirer, changeling, dreamer, fylgja
 
 ## Cosa manca
 - **Mappe Northern Expanse, Drenched Lands e Great Divide** (gioco base e Isole superiori): le immagini non
