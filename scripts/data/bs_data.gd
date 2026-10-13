@@ -109,6 +109,12 @@ const SUMMONS := {
 	"dreamer": {"n": "Sognatore", "ability": "devotion", "an": "Devozione", "at": "Attacca; se il Sognatore uccide la vittima, si uccide e tu guadagni 1 rancore."},
 }
 
+## Personaggi dell'espansione Isole Frantumate (Shattered Isles); tutti gli altri sono del gioco base.
+const EXPANSION_IDS := ["vacker", "thalduk", "akkeron", "fk", "eivind", "valdi", "fara", "esmeria_h"]
+
+static func is_expansion(id: String) -> bool:
+	return EXPANSION_IDS.has(id)
+
 # ---------------------------------------------------------------------------------- Bestie
 ## up: potenziamenti {id: [nome, costo, "p" passivo | "y" immediato, testo]}
 const BEASTS := {

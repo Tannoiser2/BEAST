@@ -190,29 +190,17 @@ func _build_hud() -> void:
 	log_lbl.resized.connect(func(): lsc.scroll_vertical = int(log_lbl.size.y))
 	# mano in basso
 	hand_tabs = HBoxContainer.new()
-	hand_tabs.position = Vector2(320, H - 248)
+	hand_tabs.position = Vector2(320, H - 306)
 	hand_tabs.add_theme_constant_override("separation", 6)
 	hud.add_child(hand_tabs)
 	var hsc := ScrollContainer.new()
-	hsc.position = Vector2(316, H - 212)
-	hsc.size = Vector2(W - 316 - 480, 208)
+	hsc.position = Vector2(316, H - 270)
+	hsc.size = Vector2(W - 316 - 480, 266)
 	hsc.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	hud.add_child(hsc)
 	hand_box = HBoxContainer.new()
 	hand_box.add_theme_constant_override("separation", 8)
 	hsc.add_child(hand_box)
-	# comandi della telecamera (anche per il tocco)
-	var cb := HBoxContainer.new()
-	cb.position = Vector2(8, H - 244)
-	cb.add_theme_constant_override("separation", 4)
-	hud.add_child(cb)
-	for b2 in [["↺", func(): table.rotate_cam(-15, 0)], ["↻", func(): table.rotate_cam(15, 0)], ["▲", func(): table.rotate_cam(0, 8)], ["▼", func(): table.rotate_cam(0, -8)], ["+", func(): table.zoom_cam(0.85)], ["−", func(): table.zoom_cam(1.15)], ["⌂", func(): table.reset_camera()]]:
-		var bt2 := Button.new()
-		bt2.text = b2[0]
-		bt2.custom_minimum_size = Vector2(40, 40)
-		bt2.tooltip_text = "Telecamera: tasto destro ruota, rotellina avvicina, trascina per spostare (Q/E/R/F, +/−, Home)"
-		bt2.pressed.connect(b2[1])
-		cb.add_child(bt2)
 	hover_lbl = UI.label("", 20, Color("#f0e6c8"), UI.font_bold)
 	hover_lbl.position = Vector2(320, 60)
 	hover_lbl.add_theme_color_override("font_outline_color", Color.BLACK)
@@ -550,23 +538,23 @@ func _refresh_hand() -> void:
 
 func _card_widget(cid: String, opts: Array) -> Control:
 	var w := Control.new()
-	w.custom_minimum_size = Vector2(142, 200)
+	w.custom_minimum_size = Vector2(184, 258)
 	var t := UI.card_tex(cid)
 	var r := TextureRect.new()
 	r.texture = t
 	r.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	r.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	r.size = Vector2(142, 200)
+	r.size = Vector2(184, 258)
 	r.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	w.add_child(r)
 	if t == null:
 		var l := UI.label(D.cname(cid), 18, Color.WHITE, UI.font_bold)
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		l.size = Vector2(130, 190)
+		l.size = Vector2(172, 246)
 		l.position = Vector2(6, 6)
 		w.add_child(l)
 	var frame := Panel.new()
-	frame.size = Vector2(142, 200)
+	frame.size = Vector2(184, 258)
 	frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	frame.add_theme_stylebox_override("panel", UI.panel_style(Color(0, 0, 0, 0), UI.GOLD if not opts.is_empty() else Color(0, 0, 0, 0), 3 if not opts.is_empty() else 0, 8))
 	w.add_child(frame)

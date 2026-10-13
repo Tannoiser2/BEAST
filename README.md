@@ -132,6 +132,11 @@ segreti, 0 accessi negati, verifica superata, anche con uscita e rientro a metà
 - I testi delle regole delle carte (Azioni, abilità, potenziamenti, Oggetti, Talenti, contratti,
   evocazioni) sono tradotti in italiano in `scripts/data/bs_data.gd` e sono quelli mostrati nel gioco.
 
+### Gioco base e espansione
+- **Gioco base** — Bestie: Bolgin (evoca Polipo), Fangrir (Lupo), Mara (Banshee), Raaga (Basilisco), Hogbad (Cinghiale da guerra), Esmeria (Mutaforma). Cacciatori: Assar, Grimgeir, Helga, Iona, Krim, Varja.
+- **Isole Frantumate (Shattered Isles)** — Bestie: Vacker (Ammiratore), Thalduk (Yagi), Akkeron (Abominio), Re Piumato (Sognatore). Cacciatori: Eivind, Valdi, Fara, Esmeria capitana.
+- Nel menu ogni personaggio ha l'etichetta «GIOCO BASE» o «ISOLE FRANTUMATE»; se esiste la miniatura 3D, al posto dell'immagine compare il modello che ruota.
+
 ## Miniature 3D (Meshy)
 Animali e coloni hanno già i loro modelli 3D. Cacciatori, Bestie ed evocati nel gioco da tavolo sono sagome
 di cartone: per ora nel gioco sono sagome su basetta, ma **ognuna si sostituisce con una miniatura 3D

@@ -260,3 +260,69 @@ static func team_col(side: String) -> Color:
 ## Testo con i segni [b] del registro convertito per un'etichetta semplice.
 static func plain(t: String) -> String:
 	return t.replace("[b]", "").replace("[/b]", "")
+
+
+## Anteprima 3D che gira lentamente (miniatura .glb in assets/miniatures/); null se il modello non c'è.
+static func mini_view(id: String, sz: Vector2) -> Control:
+	var glb := "res://assets/miniatures/%s.glb" % id
+	if not ResourceLoader.exists(glb):
+		return null
+	var box := SubViewportContainer.new()
+	box.stretch = true
+	box.custom_minimum_size = sz
+	box.size = sz
+	var vp := SubViewport.new()
+	vp.own_world_3d = true
+	vp.transparent_bg = true
+	vp.msaa_3d = Viewport.MSAA_4X
+	vp.size = Vector2i(sz)
+	box.add_child(vp)
+	var env := WorldEnvironment.new()
+	var e := Environment.new()
+	e.background_mode = Environment.BG_CLEAR_COLOR
+	e.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
+	e.ambient_light_color = Color("#d8cdb4")
+	e.ambient_light_energy = 0.55
+	env.environment = e
+	vp.add_child(env)
+	var key := DirectionalLight3D.new()
+	key.light_energy = 1.3
+	key.rotation_degrees = Vector3(-35, 30, 0)
+	vp.add_child(key)
+	var rim := DirectionalLight3D.new()
+	rim.light_energy = 0.6
+	rim.light_color = Color("#9fc8ff")
+	rim.rotation_degrees = Vector3(-20, 200, 0)
+	vp.add_child(rim)
+	var spin := Node3D.new()
+	vp.add_child(spin)
+	var inst: Node3D = (load(glb) as PackedScene).instantiate()
+	var hold := Node3D.new()
+	hold.add_child(inst)
+	spin.add_child(hold)
+	var ab := AABB()
+	var first := true
+	for c in inst.find_children("*", "MeshInstance3D", true, false):
+		var mi: MeshInstance3D = c
+		var a: AABB = mi.transform * mi.get_aabb()
+		var p := mi.get_parent()
+		while p != null and p != hold:
+			if p is Node3D:
+				a = (p as Node3D).transform * a
+			p = p.get_parent()
+		ab = a if first else ab.merge(a)
+		first = false
+	var s: float = 1.0 / max(ab.size.y, 0.0001)
+	hold.scale = Vector3.ONE * s
+	hold.position = Vector3(-(ab.position.x + ab.size.x / 2) * s, -ab.position.y * s, -(ab.position.z + ab.size.z / 2) * s)
+	var cam := Camera3D.new()
+	cam.fov = 30
+	var wide: float = max(ab.size.x, ab.size.z) * s
+	var dist: float = max(1.0 / (2.0 * tan(deg_to_rad(15.0))), wide * 1.4)
+	cam.position = Vector3(0, 0.6, dist)
+	vp.add_child(cam)
+	cam.look_at_from_position(cam.position, Vector3(0, 0.5, 0), Vector3.UP)
+	box.tree_entered.connect(func():
+		var tw := box.create_tween().set_loops()
+		tw.tween_property(spin, "rotation:y", TAU, 14.0).from(0.0))
+	return box

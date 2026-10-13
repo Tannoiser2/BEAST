@@ -469,7 +469,6 @@ func make_standee(id: String, tex_key: String, height := 0.95, base_col := Color
 	back.material_override = _mat(t, true, 0.95)
 	card.add_child(back)
 	root.set_meta("card", card)
-	upright.append(card)
 	return root
 
 
@@ -505,7 +504,6 @@ func make_meeple(kind: String, height := 0.42) -> Node3D:
 	var spin := Node3D.new()
 	spin.add_child(mi)
 	root.add_child(spin)
-	upright.append(spin)
 	return root
 
 
@@ -537,11 +535,7 @@ func make_disc(tex: Texture2D, r := 0.15, h := 0.04, edge := Color("#3a2c1e")) -
 func _process(_d: float) -> void:
 	if cam == null:
 		return
-	var y := cam.global_rotation.y
-	for n in upright:
-		if is_instance_valid(n):
-			n.global_rotation = Vector3(0, y, 0)
-	upright = upright.filter(func(n): return is_instance_valid(n))
+	pass  # i pezzi restano fissi sulla plancia (niente rotazione verso la telecamera)
 
 
 # ================================================================== aggiornamento dalla vista

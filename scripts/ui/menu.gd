@@ -185,11 +185,22 @@ func _slot(is_beast: bool, i: int, pos: Vector2) -> void:
 	frame.size = root.size
 	frame.add_theme_stylebox_override("panel", UI.panel_style(Color("#0b0e0ce6"), (UI.BEAST_COL if is_beast else UI.HUNTER_COL) if not ai else Color("#3a3f3a"), 3 if not ai else 1, 8))
 	root.add_child(frame)
-	var por := UI.icon_rect(UI.standee_tex(id), Vector2(150, 170))
+	var por: Control = UI.mini_view(id, Vector2(150, 170))
+	if por == null:
+		por = UI.icon_rect(UI.standee_tex(id), Vector2(150, 170))
 	por.position = Vector2(68, 8)
 	por.mouse_filter = Control.MOUSE_FILTER_STOP
 	por.tooltip_text = str(d.get("lore", ""))
 	root.add_child(por)
+	var is_exp := D.is_expansion(id)
+	var tag := UI.label("ISOLE FRANTUMATE" if is_exp else "GIOCO BASE", 15, Color("#7fd3e8") if is_exp else Color("#e8c97f"), UI.font_bold)
+	tag.position = Vector2(0, 156)
+	tag.size = Vector2(286, 20)
+	tag.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	tag.add_theme_color_override("font_outline_color", Color.BLACK)
+	tag.add_theme_constant_override("outline_size", 5)
+	tag.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.add_child(tag)
 	for k in [-1, 1]:
 		var b := Button.new()
 		b.text = "◀" if k < 0 else "▶"
