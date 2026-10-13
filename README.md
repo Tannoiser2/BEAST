@@ -159,18 +159,17 @@ python3 meshy/genera_miniature.py bolgin wolf # solo alcune
 Le immagini di riferimento sono in `meshy/riferimenti/` (le sagome del modulo, con lo sfondo trasparente).
 Dopo, riapri il progetto in Godot (o fai il push: la action di GitHub importa i modelli da sola).
 
-**Miniature già fatte (31)**, generate con Meshy dalle illustrazioni del modulo:
+**Miniature già fatte (32): tutte**, generate con Meshy dalle illustrazioni del modulo:
 - Cacciatori: assar, grimgeir, helga, iona, krim, varja (gioco base); eivind, valdi, fara, esmeria_h (Isole Frantumate)
 - Bestie: bolgin, fangrir, mara, raaga, hogbad, esmeria (gioco base); vacker, thalduk, akkeron, fk (Isole Frantumate)
-- Evocati e compagni: banshee, basilisk, polyp, warhog, wolf, changeling (gioco base); abomination, admirer, dreamer, fylgja (Isole Frantumate)
+- Evocati e compagni: banshee, basilisk, polyp, warhog, wolf, changeling (gioco base); abomination, admirer, dreamer, fylgja, yagi (Isole Frantumate)
 - Torre di guardia: watchtower
 
 Nel menu di scelta i personaggi con la miniatura compaiono in 3D al posto dell'illustrazione.
 
-**Miniature da fare (1):** lo Yagi, l'evocato di Thalduk (nel modulo non c'è la sua sagoma: si può fare dall'illustrazione della carta).
+Lo Yagi nell'illustrazione ha solo la testa: il corpo è stato completato nello stesso stile.
 
 ## Cosa manca
-- La miniatura 3D dello Yagi (vedi sopra).
 - Le carte in italiano (si aggiungono in `assets/cards/it/`).
 
 ## Struttura
