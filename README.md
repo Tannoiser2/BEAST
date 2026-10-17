@@ -21,7 +21,7 @@ pubblicamente.
   abilità, potenziamenti rossi/blu e gialli, Talenti bestiali, Oggetti del cacciatore, trappole, torri di
   guardia, carte Azione con il draft dell'alba, carte Caccia e Tracciamento, evocazioni (Polipo, Lupo,
   Banshee, Basilisco, Mutaforma, Sognatore, Abominio, Ammiratore, Facocero) e le Rovine.
-- **Tutte e quattro le mappe e tutti i 10 contratti**, scelti nel menu per mappa:
+- **Tutte e quattro le mappe e tutti i 10 contratti**, sfogliati nel menu mappa per mappa:
   - *Isole Frantumate inferiori*: *Reggente delle rovine* (2–3, contatore del Dominio), *Un patto
     dimenticato* (4), *L'arrivo della Titan* (5, due Bestie, coloni da scortare).
   - *Isole Frantumate superiori*: *Segreti di un'era perduta* (2–3), *Liberare l'Abisso* (4, palude
@@ -40,8 +40,14 @@ pubblicamente.
   cacciatori, Bestie ed evocati sono sagome di cartone su basetta (sostituibili da miniature 3D, vedi
   sotto); tracce, ferite, segnalini, torri e trappole sono pedine 3D. Le carte Movimento attive della
   Bestia sono posate sulla colonna stampata della plancia (coperte, per i cacciatori).
-- **Carte con lo zoom**: passa il mouse su una carta (della mano o di una scelta) per vederla in grande
-  con il testo italiano; il pulsante ARSENALE mostra tutto ciò che è stato giocato e scartato.
+- **Carte vere, niente menu**: le carte si scelgono cliccandole. Quelle della mano sono in basso, tutte
+  intere (si rimpiccioliscono quando sono tante, senza barre di scorrimento): le utilizzabili hanno l'alone
+  dorato, le altre sono spente. Se una carta si gioca in più modi (rossa/blu, sovraccarica, Carica d'anime)
+  i modi compaiono come pulsanti sulla carta. Le carte da scegliere fuori dalla mano (draft dell'alba,
+  Arsenale, carte scartate, mano di un altro) appaiono grandi al centro dello schermo; nel draft sotto ci
+  sono le carte già tenute. Il pannello a destra resta per le scelte senza carte (Fuggi, Passa, luoghi…).
+- **Carte con lo zoom**: passa il mouse su una carta della mano per vederla in grande con il testo
+  italiano; il pulsante ARSENALE mostra tutto ciò che è stato giocato e scartato.
 - **IA** su tre livelli (Facile / Normale / Difficile), vedi sotto.
 - **Schede dei personaggi** (a sinistra): sotto ogni personaggio le sue abilità, con il bordo colorato
   se sono pronte, spente con «usata» se sono già state giocate oggi (tornano in mano di notte), con
@@ -163,6 +169,14 @@ segreti, 0 accessi negati, verifica superata, anche con uscita e rientro a metà
 ### Gioco base e espansione
 - **Gioco base** — Bestie: Bolgin (evoca Polipo), Fangrir (Lupo), Mara (Banshee), Raaga (Basilisco), Hogbad (Facocero), Esmeria (Mutaforma). Cacciatori: Assar, Grimgeir, Helga, Iona, Krim, Varja.
 - **Isole Frantumate (Shattered Isles)** — Bestie: Vacker (Ammiratore), Thalduk (Yagi), Akkeron (Abominio), Re Piumato (Sognatore). Cacciatori: Eivind, Valdi, Fara, Esmeria capitana.
+- Le mappe del gioco base sono *Terre inondate* e *Distesa del Nord* (contratti La Grande Purificazione,
+  Naufragio, Attacco agli insediamenti del Nord, I tumulti degli dèi del Nord); le *Isole Frantumate*
+  inferiori e superiori sono dell'espansione.
+- **Espansione facoltativa**: nel menu «Espansione Isole Frantumate: Sì / No». Con «No» restano solo le
+  mappe, i contratti, le Bestie, i cacciatori e le carte (Azioni, Oggetti, Talenti) del gioco base, tutte
+  in italiano; le carte dell'espansione sono quelle segnate `"si": true` in `bs_data.gd`.
+- **Menu**: il contratto è la carta grande a destra, sfogliata con le frecce ◀ ▶ (clic per ingrandirla);
+  livello e velocità dell'IA sono a sinistra accanto alle Bestie, dove si sceglie Umano o IA.
 - Nel menu ogni personaggio ha l'etichetta «GIOCO BASE» o «ISOLE FRANTUMATE»; se esiste la miniatura 3D, al posto dell'immagine compare il modello che ruota.
 
 ## Miniature 3D (Meshy)

@@ -16,8 +16,10 @@ var level := 1
 var speed := 1
 var msg: Label
 var slots_root: Control
-var contract_lbl: RichTextLabel
+var contract_name: Label
 var contract_img: TextureRect
+var expansion := true                # false: solo gioco base (mappe, personaggi e carte)
+var subtitle: Label
 var np_row: HBoxContainer
 
 
@@ -33,6 +35,7 @@ func _ready() -> void:
 		hunter_ai = s["hunter_ai"].duplicate()
 		level = s["level"]
 		speed = s["speed"]
+		expansion = s.get("expansion", true)
 	var bg := TextureRect.new()
 	bg.texture = UI.tex("res://assets/board/lower_shattered_isles.jpg")
 	bg.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
@@ -44,65 +47,62 @@ func _ready() -> void:
 	var t := UI.title("BEAST", 104, Color("#e8c46a"))
 	t.position = Vector2(60, 18)
 	add_child(t)
-	var st := UI.label("con l'espansione Shattered Isles · Studio Midhall · uno contro tutti, con il movimento nascosto gestito dal motore", 27, Color("#d8cdb4"), UI.font_italic)
-	st.position = Vector2(66, 150)
-	add_child(st)
-	# contratto
+	subtitle = UI.label("", 27, Color("#d8cdb4"), UI.font_italic)
+	subtitle.position = Vector2(66, 150)
+	add_child(subtitle)
+	# contratto: la carta grande, sfogliata con le frecce
 	var cbox := PanelContainer.new()
 	cbox.add_theme_stylebox_override("panel", UI.panel_style(Color("#0b0e0cdd"), Color("#4a4632"), 1, 8))
-	cbox.position = Vector2(1240, 40)
-	cbox.custom_minimum_size = Vector2(640, 0)
+	cbox.position = Vector2(1300, 30)
+	cbox.custom_minimum_size = Vector2(580, 900)
 	add_child(cbox)
 	var cv := VBoxContainer.new()
-	cv.add_theme_constant_override("separation", 8)
+	cv.add_theme_constant_override("separation", 10)
 	cbox.add_child(cv)
-	cv.add_child(UI.label("Contratto", 28, Color.WHITE, UI.font_bold))
-	var map_ids: Array = MAP_ORDER.map(func(m): return m[0])
-	var map_names: Array = MAP_ORDER.map(func(m): return m[1])
+	var exp_row := HBoxContainer.new()
+	exp_row.add_theme_constant_override("separation", 10)
+	exp_row.add_child(UI.label("Espansione Isole Frantumate", 22, Color("#7fd3e8"), UI.font_bold))
+	exp_row.add_child(_segmented(["Sì", "No"], 0 if expansion else 1, func(k): _set_expansion(k == 0), 100))
+	cv.add_child(exp_row)
+	contract_name = UI.label("", 22, Color.WHITE, UI.font_bold)
+	contract_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	cv.add_child(contract_name)
 	var crow := HBoxContainer.new()
-	var build_contracts := func(mid: String):
-		for c in crow.get_children():
-			c.queue_free()
-		var ks: Array = PLAYABLE.filter(func(k): return D.CONTRACTS[k]["map"] == mid)
-		var nm: Array = ks.map(func(k): return "%s (%s)" % [D.CONTRACTS[k]["n"], "-".join(D.CONTRACTS[k]["players"].map(func(x): return str(x)))])
-		crow.add_child(_segmented_wrap(nm, ks.find(contract), func(k):
-			contract = ks[k]
-			var pl: Array = D.CONTRACTS[contract]["players"]
-			if not pl.has(nplayers):
-				nplayers = pl[0]
-			_refresh()))
-	cv.add_child(_segmented(map_names, map_ids.find(D.CONTRACTS[contract]["map"]), func(k):
-		var mid: String = map_ids[k]
-		contract = PLAYABLE.filter(func(c): return D.CONTRACTS[c]["map"] == mid)[0]
-		var pl: Array = D.CONTRACTS[contract]["players"]
-		if not pl.has(nplayers):
-			nplayers = pl[0]
-		build_contracts.call(mid)
-		_refresh(), 152))
+	crow.alignment = BoxContainer.ALIGNMENT_CENTER
+	crow.add_theme_constant_override("separation", 8)
 	cv.add_child(crow)
-	build_contracts.call(D.CONTRACTS[contract]["map"])
+	for k in [-1, 1]:
+		var b := Button.new()
+		b.text = "◀" if k < 0 else "▶"
+		b.custom_minimum_size = Vector2(60, 140)
+		b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		b.add_theme_font_size_override("font_size", 30)
+		var kk: int = k
+		b.pressed.connect(func(): _cycle_contract(kk))
+		if k > 0:
+			contract_img = TextureRect.new()
+			contract_img.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			contract_img.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+			contract_img.custom_minimum_size = Vector2(380, 720)
+			contract_img.mouse_filter = Control.MOUSE_FILTER_STOP
+			contract_img.tooltip_text = "Clic per ingrandire"
+			contract_img.gui_input.connect(func(ev):
+				if ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT:
+					_zoom_contract())
+			crow.add_child(contract_img)
+		crow.add_child(b)
 	np_row = HBoxContainer.new()
+	np_row.alignment = BoxContainer.ALIGNMENT_CENTER
 	cv.add_child(np_row)
-	var ch := HBoxContainer.new()
-	ch.add_theme_constant_override("separation", 10)
-	cv.add_child(ch)
-	contract_img = TextureRect.new()
-	contract_img.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	contract_img.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	contract_img.custom_minimum_size = Vector2(150, 300)
-	contract_img.mouse_filter = Control.MOUSE_FILTER_STOP
-	contract_img.gui_input.connect(func(ev):
-		if ev is InputEventMouseButton and ev.pressed:
-			_zoom_contract())
-	ch.add_child(contract_img)
-	contract_lbl = UI.rich(19)
-	contract_lbl.custom_minimum_size = Vector2(470, 0)
-	ch.add_child(contract_lbl)
-	cv.add_child(HSeparator.new())
-	cv.add_child(UI.label("Livello IA", 26, Color.WHITE, UI.font_bold))
-	cv.add_child(_segmented(["Facile", "Normale", "Difficile"], level, func(k): level = k, 200))
-	cv.add_child(UI.label("Velocità IA", 26, Color.WHITE, UI.font_bold))
-	cv.add_child(_segmented(["Lenta", "Normale", "Veloce", "Istantanea"], speed, func(k): speed = k, 150))
+	# livello e velocità dell'IA: a sinistra, accanto alle Bestie (dove si sceglie Umano o IA)
+	var lv := VBoxContainer.new()
+	lv.add_theme_constant_override("separation", 8)
+	lv.position = Vector2(690, 268)
+	add_child(lv)
+	lv.add_child(UI.label("Livello IA", 24, Color.WHITE, UI.font_bold))
+	lv.add_child(_segmented(["Facile", "Normale", "Difficile"], level, func(k): level = k, 186))
+	lv.add_child(UI.label("Velocità IA", 24, Color.WHITE, UI.font_bold))
+	lv.add_child(_segmented(["Lenta", "Normale", "Veloce", "Istantanea"], speed, func(k): speed = k, 136))
 	slots_root = Control.new()
 	slots_root.position = Vector2(60, 210)
 	add_child(slots_root)
@@ -137,7 +137,7 @@ func _ready() -> void:
 
 func _store() -> void:
 	main.menu_state = {"contract": contract, "nplayers": nplayers, "beasts": beasts.duplicate(), "hunters": hunters.duplicate(),
-		"beast_ai": beast_ai.duplicate(), "hunter_ai": hunter_ai.duplicate(), "level": level, "speed": speed}
+		"beast_ai": beast_ai.duplicate(), "hunter_ai": hunter_ai.duplicate(), "level": level, "speed": speed, "expansion": expansion}
 
 
 func n_beasts() -> int:
@@ -152,20 +152,62 @@ func n_hunters() -> int:
 
 func _refresh() -> void:
 	var K: Dictionary = D.CONTRACTS[contract]
+	subtitle.text = ("con l'espansione Shattered Isles" if expansion else "gioco base") + " · Studio Midhall · uno contro tutti, con il movimento nascosto gestito dal motore"
 	contract_img.texture = UI.board_tex(K["img"])
-	contract_lbl.text = "[b]%s[/b] · %s · %s giocatori\n[i]%s[/i]\n[b]Fine:[/b] %s" % [K["n"], D.MAPS[K["map"]]["name"], "-".join(K["players"].map(func(x): return str(x))), K["intro"], K["end_t"]]
+	var list := _contracts()
+	contract_name.text = "%s · %d di %d" % [D.MAPS[K["map"]]["name"], list.find(contract) + 1, list.size()]
 	for c in np_row.get_children():
 		c.queue_free()
-	if K["players"].size() > 1:
-		var lab := UI.label("Giocatori  ", 24, Color.WHITE, UI.font_bold)
-		np_row.add_child(lab)
-		var opts := []
-		for p in K["players"]:
-			opts.append("%d%s" % [p, " (un umano guida 2 cacciatori)" if p == 2 else ""])
-		np_row.add_child(_segmented(opts, K["players"].find(nplayers), func(k):
-			nplayers = K["players"][k]
-			_refresh(), 260))
+	var lab := UI.label("Giocatori  ", 24, Color.WHITE, UI.font_bold)
+	np_row.add_child(lab)
+	var opts := []
+	for p in K["players"]:
+		opts.append("%d giocatori" % p)
+	np_row.add_child(_segmented(opts, K["players"].find(nplayers), func(k):
+		nplayers = K["players"][k]
+		_refresh(), 180))
 	_build_slots()
+
+
+## Contratti selezionabili (con o senza espansione), nell'ordine delle mappe.
+func _contracts() -> Array:
+	var out := []
+	for m in MAP_ORDER:
+		for k in PLAYABLE:
+			if D.CONTRACTS[k]["map"] == m[0] and (expansion or D.contract_is_base(k)):
+				out.append(k)
+	return out
+
+
+func _cycle_contract(k: int) -> void:
+	var list := _contracts()
+	var i := list.find(contract)
+	contract = list[(i + k + list.size()) % list.size()]
+	var pl: Array = D.CONTRACTS[contract]["players"]
+	if not pl.has(nplayers):
+		nplayers = pl[0]
+	msg.text = ""
+	_refresh()
+
+
+## Con l'espansione spenta restano le mappe, i personaggi e le carte del gioco base.
+func _set_expansion(on: bool) -> void:
+	expansion = on
+	if not on:
+		if not D.contract_is_base(contract):
+			contract = _contracts()[0]
+			var pl: Array = D.CONTRACTS[contract]["players"]
+			if not pl.has(nplayers):
+				nplayers = pl[0]
+		for arr in [beasts, hunters]:
+			var pool: Array = (D.BEASTS.keys() if arr == beasts else D.HUNTERS.keys()).filter(func(x): return not D.is_expansion(x))
+			for i in range(arr.size()):
+				if D.is_expansion(arr[i]):
+					for cand in pool:
+						if not arr.has(cand):
+							arr[i] = cand
+							break
+	_refresh()
 
 
 func _build_slots() -> void:
@@ -267,6 +309,8 @@ func _slot(is_beast: bool, i: int, pos: Vector2) -> void:
 
 func _cycle(is_beast: bool, i: int, k: int) -> void:
 	var pool: Array = D.BEASTS.keys() if is_beast else D.HUNTERS.keys()
+	if not expansion:
+		pool = pool.filter(func(x): return not D.is_expansion(x))
 	var cur: String = beasts[i] if is_beast else hunters[i]
 	var idx := pool.find(cur)
 	for n in range(pool.size()):
@@ -284,32 +328,6 @@ func _cycle(is_beast: bool, i: int, k: int) -> void:
 			hunters[i] = cand
 		break
 	_build_slots()
-
-
-## Pulsanti a scelta singola su più righe (nomi lunghi dei contratti).
-func _segmented_wrap(items: Array, cur: int, cb: Callable) -> VBoxContainer:
-	var vb := VBoxContainer.new()
-	vb.add_theme_constant_override("separation", 4)
-	var btns := []
-	for k in range(items.size()):
-		var b := Button.new()
-		b.text = items[k]
-		b.custom_minimum_size = Vector2(620, 40)
-		b.add_theme_font_size_override("font_size", 19)
-		vb.add_child(b)
-		btns.append(b)
-	var paint := func(sel: int):
-		for k in range(btns.size()):
-			var on: bool = k == sel
-			btns[k].add_theme_stylebox_override("normal", UI.panel_style(UI.GOLD if on else Color("#1a1f1c"), UI.GOLD if on else Color("#4a4a3a"), 2, 4))
-			btns[k].add_theme_color_override("font_color", UI.DARK if on else Color("#dddddd"))
-			btns[k].add_theme_color_override("font_hover_color", UI.DARK if on else UI.GOLD)
-	for k in range(btns.size()):
-		btns[k].pressed.connect(func():
-			paint.call(k)
-			cb.call(k))
-	paint.call(cur)
-	return vb
 
 
 func _segmented(items: Array, cur: int, cb: Callable, w := 200) -> HBoxContainer:
@@ -361,7 +379,7 @@ func _config() -> Dictionary:
 	for i in range(hs.size()):
 		ctrl.append({"ai": hunter_ai[i], "level": level, "who": "", "player": p if nplayers == 2 else p + i})
 	var speeds := [1.1, 0.55, 0.18, 0.0]
-	return {"contract": contract, "beasts": bs, "hunters": hs, "ctrl": ctrl, "ai_delay": speeds[speed], "level": level}
+	return {"contract": contract, "beasts": bs, "hunters": hs, "ctrl": ctrl, "ai_delay": speeds[speed], "level": level, "base_only": not expansion}
 
 
 func _on_start() -> void:

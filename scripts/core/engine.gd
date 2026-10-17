@@ -22,6 +22,7 @@ func setup(config: Dictionary) -> void:
 	if salt == "":
 		salt = Crypto.new().generate_random_bytes(16).hex_encode()
 	contract_id = str(config.get("contract", "regent"))
+	base_only = bool(config.get("base_only", false))
 	K = D.CONTRACTS[contract_id]
 	M = D.MAPS[K["map"]].duplicate()
 	M["id"] = K["map"]
@@ -99,9 +100,9 @@ func setup(config: Dictionary) -> void:
 		if L.has("ruin"):
 			ruins[L["ruin"]] = ""
 	# mazzi
-	action_deck = D.action_deck()
-	item_deck = D.item_deck()
-	talent_deck = D.talent_deck()
+	action_deck = D.action_deck(base_only)
+	item_deck = D.item_deck(base_only)
+	talent_deck = D.talent_deck(base_only)
 	shuffle(action_deck)
 	shuffle(item_deck)
 	shuffle(talent_deck)
@@ -295,7 +296,7 @@ func dawn() -> void:
 ## Draft delle carte Azione (regole di Shattered Isles).
 func draft() -> void:
 	# tutte le carte Azione tornano nel mazzo e si mescolano
-	action_deck = D.action_deck()
+	action_deck = D.action_deck(base_only)
 	for c in ch:
 		for x in c["hand"]:
 			if D.kind(x) == "action":

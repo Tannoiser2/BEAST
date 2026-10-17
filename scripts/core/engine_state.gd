@@ -31,6 +31,7 @@ var seed_used := 0
 
 # --- configurazione
 var contract_id := "regent"
+var base_only := false       # solo gioco base: niente carte dell'espansione Isole Frantumate
 var K: Dictionary = {}       # dati del contratto
 var M: Dictionary = {}       # dati della mappa
 var LOCS: Dictionary = {}

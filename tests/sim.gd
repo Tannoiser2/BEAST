@@ -22,6 +22,9 @@ func _init() -> void:
 	var t0 := Time.get_ticks_msec()
 	var all_b := BD.BEASTS.keys()
 	var all_h := BD.HUNTERS.keys()
+	if OS.get_environment("BS_BASE") != "":
+		all_b = all_b.filter(func(x): return not BD.is_expansion(x))
+		all_h = all_h.filter(func(x): return not BD.is_expansion(x))
 	var from := int(OS.get_environment("BS_FROM")) if OS.get_environment("BS_FROM") != "" else 0
 	for g in range(from, from + games):
 		var r := RandomNumberGenerator.new()
@@ -50,7 +53,7 @@ func _init() -> void:
 		var eng := BSEngine.new()
 		eng.headless = true
 		root.add_child(eng)
-		eng.setup({"contract": contract, "beasts": bs, "hunters": hs, "ctrl": ctrl, "seed": 1000 + g})
+		eng.setup({"contract": contract, "beasts": bs, "hunters": hs, "ctrl": ctrl, "seed": 1000 + g, "base_only": OS.get_environment("BS_BASE") != ""})
 		if OS.get_environment("BS_LOG") != "":
 			eng.log_added.connect(func(t): print("  ", t))
 		await eng.run()

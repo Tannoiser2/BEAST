@@ -24,6 +24,7 @@ var hud: Control
 var top_lbl: RichTextLabel
 var chars_box: VBoxContainer
 var hand_box: HBoxContainer
+var pick_layer: Control
 var hand_tabs: HBoxContainer
 var dec_panel: PanelContainer
 var dec_title: Label
@@ -137,7 +138,7 @@ func _build_hud() -> void:
 	# personaggi a sinistra
 	var sc := ScrollContainer.new()
 	sc.position = Vector2(8, 62)
-	sc.size = Vector2(300, H - 62 - 250)
+	sc.size = Vector2(300, H - 62 - 300)
 	sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	hud.add_child(sc)
 	chars_box = VBoxContainer.new()
@@ -177,7 +178,7 @@ func _build_hud() -> void:
 	# registro
 	log_panel = PanelContainer.new()
 	log_panel.add_theme_stylebox_override("panel", UI.panel_style(Color("#0b0e0cd0"), Color("#3a3a2a"), 1, 6))
-	log_panel.position = Vector2(W - 470, H - 430)
+	log_panel.position = Vector2(W - 470, H - 486)
 	log_panel.size = Vector2(460, 180)
 	hud.add_child(log_panel)
 	var lsc := ScrollContainer.new()
@@ -188,19 +189,24 @@ func _build_hud() -> void:
 	log_lbl.custom_minimum_size = Vector2(430, 0)
 	lsc.add_child(log_lbl)
 	log_lbl.resized.connect(func(): lsc.scroll_vertical = int(log_lbl.size.y))
-	# mano in basso
+	# mano in basso: tutta la larghezza, le carte si rimpiccioliscono per entrare tutte (niente barre)
 	hand_tabs = HBoxContainer.new()
-	hand_tabs.position = Vector2(320, H - 306)
+	hand_tabs.position = Vector2(12, H - 300)
 	hand_tabs.add_theme_constant_override("separation", 6)
 	hud.add_child(hand_tabs)
-	var hsc := ScrollContainer.new()
-	hsc.position = Vector2(316, H - 270)
-	hsc.size = Vector2(W - 316 - 480, 266)
-	hsc.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	hud.add_child(hsc)
 	hand_box = HBoxContainer.new()
+	hand_box.position = Vector2(12, H - 262)
+	hand_box.size = Vector2(W - 24, 258)
+	hand_box.alignment = BoxContainer.ALIGNMENT_CENTER
 	hand_box.add_theme_constant_override("separation", 8)
-	hsc.add_child(hand_box)
+	hud.add_child(hand_box)
+	# carte da scegliere fuori dalla mano (draft, Arsenale, mano altrui…): al centro dello schermo
+	pick_layer = Control.new()
+	pick_layer.position = Vector2(316, 146)
+	pick_layer.size = Vector2(W - 316 - 480, H - 146 - 306)
+	pick_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	pick_layer.visible = false
+	hud.add_child(pick_layer)
 	hover_lbl = UI.label("", 20, Color("#f0e6c8"), UI.font_bold)
 	hover_lbl.position = Vector2(320, 60)
 	hover_lbl.add_theme_color_override("font_outline_color", Color.BLACK)
@@ -217,15 +223,15 @@ func _build_hud() -> void:
 	zoom = TextureRect.new()
 	zoom.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	zoom.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	zoom.size = Vector2(430, 602)
-	zoom.position = Vector2(W - 920, H - 250 - 610)
+	zoom.size = Vector2(390, 546)
+	zoom.position = Vector2(W - 870, 62)
 	zoom.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	zoom.visible = false
 	hud.add_child(zoom)
 	zoom_txt = UI.label("", 20, Color.WHITE, UI.font_bold)
 	zoom_txt.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	zoom_txt.size = Vector2(430, 120)
-	zoom_txt.position = zoom.position + Vector2(0, 600)
+	zoom_txt.size = Vector2(390, 120)
+	zoom_txt.position = zoom.position + Vector2(0, 552)
 	zoom_txt.add_theme_color_override("font_outline_color", Color.BLACK)
 	zoom_txt.add_theme_constant_override("outline_size", 6)
 	zoom_txt.visible = false
@@ -532,47 +538,95 @@ func _refresh_hand() -> void:
 				if not playable.has(o["card"]):
 					playable[o["card"]] = []
 				playable[o["card"]].append(o)
-	for cid in cur.get("hand", []):
-		hand_box.add_child(_card_widget(cid, playable.get(cid, [])))
+	# tutte le carte devono entrare nella larghezza dello schermo, senza barre di scorrimento
+	var hand: Array = cur.get("hand", [])
+	var n: int = max(1, hand.size())
+	var cw: float = min(184.0, (hand_box.size.x - 8.0 * (n - 1)) / n)
+	for cid in hand:
+		hand_box.add_child(_card_widget(cid, playable.get(cid, []), Vector2(cw, cw * 1.4)))
 
 
-func _card_widget(cid: String, opts: Array) -> Control:
+const MODE_IT := {"R": "Rossa", "B": "Blu", "O": "Sovraccarica", "CR": "Carica (rossa)", "CB": "Carica (blu)", "X": "Gioca", "S": "Gioca"}
+
+## Carta cliccabile. opts: le opzioni della decisione in corso che la usano (vuoto = non utilizzabile ora).
+## Se la carta si può giocare in più modi, i modi compaiono come pulsanti sulla carta stessa.
+func _card_widget(cid: String, opts: Array, sz := Vector2(184, 258), zoom_on_hover := true) -> Control:
 	var w := Control.new()
-	w.custom_minimum_size = Vector2(184, 258)
+	w.custom_minimum_size = sz
+	w.size = sz
 	var t := UI.card_tex(cid)
+	var usable := not opts.is_empty()
+	var waiting := not pending.is_empty()
+	# alone dorato dietro le carte utilizzabili
+	if usable:
+		var glow := Panel.new()
+		glow.position = Vector2(-5, -5)
+		glow.size = sz + Vector2(10, 10)
+		glow.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var gs := UI.panel_style(Color(0.95, 0.75, 0.3, 0.35), UI.GOLD, 4, 12)
+		gs.shadow_color = Color(1.0, 0.8, 0.3, 0.55)
+		gs.shadow_size = 12
+		glow.add_theme_stylebox_override("panel", gs)
+		w.add_child(glow)
 	var r := TextureRect.new()
 	r.texture = t
 	r.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	r.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	r.size = Vector2(184, 258)
+	r.size = sz
 	r.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	w.add_child(r)
 	if t == null:
 		var l := UI.label(D.cname(cid), 18, Color.WHITE, UI.font_bold)
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		l.size = Vector2(172, 246)
+		l.size = sz - Vector2(12, 12)
 		l.position = Vector2(6, 6)
 		w.add_child(l)
-	var frame := Panel.new()
-	frame.size = Vector2(184, 258)
-	frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	frame.add_theme_stylebox_override("panel", UI.panel_style(Color(0, 0, 0, 0), UI.GOLD if not opts.is_empty() else Color(0, 0, 0, 0), 3 if not opts.is_empty() else 0, 8))
-	w.add_child(frame)
-	if opts.is_empty() and not pending.is_empty():
-		r.modulate = Color(0.72, 0.72, 0.72)
+	if waiting and not usable:
+		# non utilizzabile in questa decisione: spenta
+		r.modulate = Color(0.38, 0.38, 0.38)
+		var sh := ColorRect.new()
+		sh.color = Color(0, 0, 0, 0.25)
+		sh.size = sz
+		sh.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		w.add_child(sh)
 	w.mouse_filter = Control.MOUSE_FILTER_STOP
 	w.mouse_entered.connect(func():
-		_show_zoom(t, _card_text(cid))
-		w.position.y = -14)
+		if zoom_on_hover:
+			_show_zoom(t, _card_text(cid))
+		if usable or not waiting:
+			w.position.y -= 14)
 	w.mouse_exited.connect(func():
-		_hide_zoom()
-		w.position.y = 0)
-	w.gui_input.connect(func(ev):
-		if ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT and not opts.is_empty():
-			if opts.size() == 1:
-				_choose(opts[0]["id"])
-			else:
-				_pick_mode(cid, opts))
+		if zoom_on_hover:
+			_hide_zoom()
+		if usable or not waiting:
+			w.position.y += 14)
+	if opts.size() == 1:
+		w.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+		var id = opts[0]["id"]
+		w.gui_input.connect(func(ev):
+			if ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT:
+				_choose(id))
+	elif opts.size() > 1:
+		var vb := VBoxContainer.new()
+		vb.add_theme_constant_override("separation", 4)
+		var bh: float = clamp(sz.y * 0.13, 26.0, 40.0)
+		vb.position = Vector2(6, sz.y * 0.42)
+		vb.size = Vector2(sz.x - 12, 0)
+		for o in opts:
+			var b := Button.new()
+			b.text = MODE_IT.get(str(o.get("mode", "")), UI.plain(str(o["label"])))
+			b.custom_minimum_size = Vector2(sz.x - 12, bh)
+			b.add_theme_font_size_override("font_size", int(clamp(sz.x * 0.1, 13.0, 19.0)))
+			b.clip_text = true
+			var col: Color = {"R": Color("#a8322a"), "B": Color("#2a5f9e"), "O": Color("#7a3a8a")}.get(str(o.get("mode", "")).right(1), Color("#3a3a30"))
+			b.add_theme_stylebox_override("normal", UI.panel_style(Color(col, 0.92), UI.GOLD, 1, 5))
+			b.add_theme_stylebox_override("hover", UI.panel_style(col.lightened(0.25), Color.WHITE, 2, 5))
+			b.add_theme_color_override("font_color", Color.WHITE)
+			b.tooltip_text = UI.plain(str(o["label"]))
+			var id2 = o["id"]
+			b.pressed.connect(func(): _choose(id2))
+			vb.add_child(b)
+		w.add_child(vb)
 	return w
 
 
@@ -607,10 +661,6 @@ func _hide_zoom() -> void:
 	zoom_txt.visible = false
 
 
-func _pick_mode(cid: String, opts: Array) -> void:
-	_modal_choice("Come giochi %s?" % D.cname(cid), opts)
-
-
 func _toast(t: String) -> void:
 	toast_lbl.text = t
 	toast_lbl.modulate.a = 1.0
@@ -631,7 +681,6 @@ func _on_request(req: Dictionary) -> void:
 func _present(req: Dictionary) -> void:
 	pending = req
 	_refresh()
-	dec_panel.visible = true
 	waiting_lbl.text = ""
 	var who := _char_name(int(req["ci"]))
 	dec_title.text = who
@@ -639,31 +688,148 @@ func _present(req: Dictionary) -> void:
 	dec_prompt.text = str(req.get("prompt", ""))
 	for c in dec_opts.get_children():
 		c.queue_free()
-	var locs := []
+	# le carte si scelgono come carte vere: quelle della mano direttamente in basso,
+	# le altre (draft, Arsenale, mano di un altro…) al centro dello schermo
+	var hand := _hand_of(int(req["ci"]))
+	var center := []
+	var others := []
 	for o in req.get("opts", []):
+		if o.has("card") and not hand.has(str(o["card"])):
+			center.append(o)
+		elif not o.has("card"):
+			others.append(o)
+	var locs := []
+	for o in others:
 		if o.has("loc") and str(o["id"]) != "stop":
 			locs.append(o["loc"])
-		var b := Button.new()
-		b.text = UI.plain(str(o["label"]))
-		b.custom_minimum_size = Vector2(420, 40)
-		b.add_theme_font_size_override("font_size", 19)
-		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
-		b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		if o.has("card"):
-			var cid: String = o["card"]
-			b.mouse_entered.connect(func(): _show_zoom(UI.card_tex(cid), _card_text(cid)))
-			b.mouse_exited.connect(_hide_zoom)
-		if o.has("loc"):
-			var l: String = o["loc"]
-			b.mouse_entered.connect(func(): table.fx_ring(l, Color("#ffe080")))
-		var id = o["id"]
-		b.pressed.connect(func(): _choose(id))
-		dec_opts.add_child(b)
-	var osc: ScrollContainer = dec_panel.find_child("osc", true, false)
-	osc.custom_minimum_size.y = min(560.0, req.get("opts", []).size() * 45.0 + 6)
+	if not center.is_empty():
+		dec_panel.visible = false
+		_build_pick(req, center, others)
+	else:
+		_clear_pick()
+		dec_panel.visible = true
+		for o in others:
+			dec_opts.add_child(_opt_button(o))
+		var osc: ScrollContainer = dec_panel.find_child("osc", true, false)
+		osc.custom_minimum_size.y = min(560.0, others.size() * 45.0 + 6)
+		var n_hand: int = req.get("opts", []).size() - others.size()
+		if n_hand > 0:
+			dec_prompt.text += "\n[color=#e8c46a]Scegli una carta evidenziata nella mano.[/color]"
 	table.set_highlights(locs, Color("#ffd36b") if req.get("side", "H") == "H" else Color("#ff7a50"))
-	if req.get("type", "") in ["beast_step", "step", "loc", "summon_loc", "start"] and not locs.is_empty():
-		pass
+
+
+func _opt_button(o: Dictionary, w := 420.0) -> Button:
+	var b := Button.new()
+	b.text = UI.plain(str(o["label"]))
+	b.custom_minimum_size = Vector2(w, 40)
+	b.add_theme_font_size_override("font_size", 19)
+	b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	if o.has("loc"):
+		var l: String = o["loc"]
+		b.mouse_entered.connect(func(): table.fx_ring(l, Color("#ffe080")))
+	var id = o["id"]
+	b.pressed.connect(func(): _choose(id))
+	return b
+
+
+## Carte in mano del personaggio ci (per la vista di questa squadra).
+func _hand_of(ci: int) -> Array:
+	for c in view.get("chars", []):
+		if int(c["i"]) == ci and c.has("hand"):
+			return c["hand"]
+	return []
+
+
+func _clear_pick() -> void:
+	for c in pick_layer.get_children():
+		c.queue_free()
+	pick_layer.visible = false
+
+
+## Carte da scegliere al centro dello schermo, grandi quanto lo spazio permette.
+func _build_pick(req: Dictionary, cards: Array, others: Array) -> void:
+	_clear_pick()
+	pick_layer.visible = true
+	var W := pick_layer.size.x
+	var H := pick_layer.size.y
+	var bg := Panel.new()
+	bg.size = pick_layer.size
+	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	bg.add_theme_stylebox_override("panel", UI.panel_style(Color("#07090ad8"), UI.team_col(req.get("side", "H")), 2, 10))
+	pick_layer.add_child(bg)
+	var ttl := UI.label("%s — %s" % [_char_name(int(req["ci"])), UI.plain(str(req.get("prompt", "")))], 24, UI.GOLD, UI.font_bold)
+	ttl.position = Vector2(16, 10)
+	ttl.size = Vector2(W - 32, 34)
+	ttl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	ttl.clip_text = true
+	pick_layer.add_child(ttl)
+	var desc := UI.label("", 18, Color("#e8e0cc"))
+	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	desc.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	# carte già tenute nel draft: piccole, in fondo
+	var kept: Array = req.get("kept", [])
+	var foot := 70.0 + (40.0 if not others.is_empty() else 0.0) + (110.0 if not kept.is_empty() else 0.0)
+	var n := cards.size()
+	var avail_h := H - 50 - foot
+	# una sola fila finché le carte restano grandi; altrimenti più file
+	var cw: float = min(260.0, min((W - 24 - 14.0 * (n - 1)) / n, avail_h / 1.4))
+	var per := n
+	var rows := 1
+	if cw < 150.0:
+		cw = 260.0
+		while cw > 80.0:
+			per = max(1, int((W - 10) / (cw + 14)))
+			rows = int(ceil(float(n) / per))
+			if rows * (cw * 1.4 + 14) <= avail_h:
+				break
+			cw -= 6.0
+	var y := 52.0
+	var idx := 0
+	for r in range(rows):
+		var cnt: int = min(per, n - idx)
+		var x := (W - cnt * (cw + 14) + 14) / 2
+		for k in range(cnt):
+			var o: Dictionary = cards[idx]
+			idx += 1
+			var cid: String = o["card"]
+			var w := _card_widget(cid, [o], Vector2(cw, cw * 1.4), false)
+			w.position = Vector2(x, y)
+			w.mouse_entered.connect(func(): desc.text = _card_text(cid).replace("\n", " · "))
+			pick_layer.add_child(w)
+			x += cw + 14
+		y += cw * 1.4 + 14
+	desc.position = Vector2(20, y)
+	desc.size = Vector2(W - 40, 60)
+	pick_layer.add_child(desc)
+	y += 64
+	if not others.is_empty():
+		var hb := HBoxContainer.new()
+		hb.alignment = BoxContainer.ALIGNMENT_CENTER
+		hb.add_theme_constant_override("separation", 10)
+		hb.position = Vector2(0, y)
+		hb.size = Vector2(W, 42)
+		for o in others:
+			var b := _opt_button(o, 260)
+			b.alignment = HORIZONTAL_ALIGNMENT_CENTER
+			hb.add_child(b)
+		pick_layer.add_child(hb)
+		y += 48
+	if kept.is_empty():
+		bg.size.y = min(H, y + 10)
+	if not kept.is_empty():
+		var kl := UI.label("Già tenute:", 18, Color("#cfc6b4"), UI.font_bold)
+		kl.position = Vector2(20, y + 36)
+		pick_layer.add_child(kl)
+		var kx := 140.0
+		for cid in kept:
+			var kw := _card_widget(str(cid), [], Vector2(70, 98), false)
+			kw.position = Vector2(kx, y)
+			pick_layer.add_child(kw)
+			kx += 78
+		y += 104
+	# il riquadro si adatta al contenuto
+	bg.size.y = min(H, y + 10)
 
 
 func _on_loc_clicked(l: String) -> void:
@@ -689,6 +855,7 @@ func _choose(id) -> void:
 func _clear_decision() -> void:
 	pending = {}
 	dec_panel.visible = false
+	_clear_pick()
 	table.set_highlights([])
 	if is_instance_valid(modal):
 		modal.queue_free()

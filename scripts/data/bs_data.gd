@@ -925,23 +925,33 @@ const CONTRACTS := {
 ## Tutti i contratti hanno la mappa: non ne manca nessuno.
 const CONTRACTS_MISSING := {}
 
-## Mazzi: [id, copie]
-static func item_deck() -> Array:
+## Mazzi: [id, copie]. base_only: senza le carte dell'espansione Isole Frantumate («si»).
+static func item_deck(base_only := false) -> Array:
 	var out := []
 	for k in ITEMS:
+		if base_only and ITEMS[k].get("si", false):
+			continue
 		for i in range(int(ITEMS[k].get("copies", 1))):
 			out.append("%s#%d" % [k, i + 1])
 	return out
 
-static func talent_deck() -> Array:
+static func talent_deck(base_only := false) -> Array:
 	var out := []
 	for k in TALENTS:
+		if base_only and TALENTS[k].get("si", false):
+			continue
 		for i in range(int(TALENTS[k].get("copies", 1))):
 			out.append("%s#%d" % [k, i + 1])
 	return out
 
-static func action_deck() -> Array:
-	return ACTIONS.keys().map(func(k): return k + "#1")
+static func action_deck(base_only := false) -> Array:
+	return ACTIONS.keys().filter(func(k): return not (base_only and ACTIONS[k].get("si", false))).map(func(k): return k + "#1")
+
+## Mappe e contratti del gioco base (le altre due mappe sono dell'espansione Isole Frantumate).
+const BASE_MAPS := ["dl", "ne"]
+
+static func contract_is_base(k: String) -> bool:
+	return BASE_MAPS.has(CONTRACTS[k]["map"])
 
 ## Dati di una carta da un identificativo d'istanza («fire_trap#2», «assar_hunt», «charge#1»).
 static func base_id(cid: String) -> String:
