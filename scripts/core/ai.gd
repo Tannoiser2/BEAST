@@ -18,8 +18,9 @@ var goal := ""               # luogo verso cui muoversi
 
 ## Pesi del livello Difficile (tarati con le simulazioni di tests/sim.gd).
 ## Per provarne altri senza toccare il codice: BS_TUNE="set=1.4,dg=0.4" godot ... tests/sim.gd
-const TUNE_BASE := {"set": 1.0, "an": 1.0, "dg": 0.6, "dmv": 0.35, "dst": 0.9, "bluff": 0.8, "ruin": 1.0, "fin": 1.5, "guard": 4.0, "escort": 0.25, "red": 1.0}
+const TUNE_BASE := {"set": 1.0, "an": 1.0, "dg": 0.6, "dmv": 0.35, "dst": 0.9, "bluff": 0.8, "ruin": 2.0, "fin": 1.5, "guard": 4.0, "escort": 0.25, "red": 1.0}
 static var _tune := {}
+static var _dbg := OS.get_environment("BS_AIDBG")   # diagnostica: 1 = scelte della Bestia, 2 = anche gli obiettivi
 
 
 func tv(k: String) -> float:
@@ -296,11 +297,39 @@ func _summon_near(eng, l: String) -> bool:
 ## Valore di una preda per il contratto in corso.
 func prey_value(eng, b: int, kind: String) -> float:
 	var k: String = eng.contract_id
+	var u := urgency(eng) if level >= 1 else 0.0
 	if kind in ["farmer", "noble"]:
-		return _prey_raw(k, kind, eng) * tv("set")
+		return _prey_raw(k, kind, eng) * tv("set") * (1.0 + 0.6 * u)
 	if kind in ["sheep", "boar", "sabertooth"]:
-		return _prey_raw(k, kind, eng) * tv("an")
+		if _animals_score(eng):
+			return 3.6 * tv("an")
+		return _prey_raw(k, kind, eng) * tv("an") * (1.0 - 0.45 * u)
 	return _prey_raw(k, kind, eng)
+
+
+## Reggente con 2 Rovine: ogni animale ferito nel turno della Bestia fa avanzare il rosso.
+func _animals_score(eng) -> bool:
+	return eng.contract_id == "regent" and eng.ruins_of("B") >= 2
+
+
+## Fretta della Bestia (0–1): quanti coloni le mancano per vincere rispetto ai giorni che restano.
+## Con la Notte finale vicina e pochi coloni uccisi, i coloni valgono di più, gli animali meno
+## e la Bestia accetta più rischi.
+func urgency(eng) -> float:
+	var K: Dictionary = eng.K
+	var need := 0
+	if K.has("beast_wins_settlers"):
+		need = int(K["beast_wins_settlers"]) - int(eng.kills.get("settler", 0))
+	elif K.get("setup", {}).get("dominion", false):
+		# Reggente: un colono morto vale 3–4 passi del rosso
+		need = int(ceil(float(int(K.get("dominion_goal", 12)) - float(eng.dom["red"])) / 3.5))
+	else:
+		return 0.0
+	if need <= 0:
+		return 0.0
+	var days_total := float(K["nights"].size() + 1)
+	var left: float = max(0.5, days_total - float(eng.day) + 1.0)
+	return clampf(float(need) / left * 0.9 + (float(eng.day) - 1.0) / days_total * 0.5, 0.0, 1.0)
 
 
 func _prey_raw(k: String, kind: String, eng) -> float:
@@ -308,6 +337,11 @@ func _prey_raw(k: String, kind: String, eng) -> float:
 		"farmer":
 			return 6.0 if k != "regent" else 7.0
 		"noble":
+			# dove conta il numero di coloni uccisi, il Contadino (2 ferite) è più facile del Nobile (3)
+			if eng.K.has("beast_wins_settlers") and level >= 1:
+				return 5.2
+			if k == "regent" and level >= 1:
+				return 7.4
 			return 6.5 if k != "regent" else 8.0
 		"sheep":
 			if eng.contract_id == "regent" and eng.ruins_of("B") >= 2:
@@ -333,6 +367,7 @@ func beast_goal(eng, b: int) -> String:
 		var v := 0.0
 		for s in eng.settlers_at(l):
 			v += prey_value(eng, b, s["kind"]) / (1.0 + float(s["wounds"] == 0) * 0.3) + float(s["wounds"]) * (tv("fin") if level >= 2 else 0.0)
+			v += _escort_threat(eng, l)
 		for a in eng.animals_at(l):
 			v += prey_value(eng, b, a["kind"]) * 0.6
 		for h in eng.hunters_at(l):
@@ -344,7 +379,9 @@ func beast_goal(eng, b: int) -> String:
 		if v <= 0:
 			continue
 		v -= float(dm[l]) * 0.9
-		v -= _danger(eng, l) * (tv("dg") if level >= 1 else 0.1)
+		v -= _danger(eng, l) * (tv("dg") if level >= 1 else 0.1) * (1.0 - 0.5 * urgency(eng))
+		if _dbg == "2":
+			print("      goal %s v=%.1f d=%d dang=%.1f" % [l, v, dm[l], _danger(eng, l)])
 		if v > bv:
 			bv = v
 			best = l
@@ -366,6 +403,14 @@ func _danger(eng, l: String) -> float:
 
 
 func beast_turn(eng, b: int, req: Dictionary):
+	var r = _beast_turn(eng, b, req)
+	if _dbg != "":
+		print("    [IA Bestia] coloni %s bestia %s" % [str(eng.settlers.map(func(x): return x["loc"])), eng.ch[b]["loc"]])
+		print("    [IA Bestia] in %s prede qui %.1f pericolo %.1f obiettivo %s fretta %.2f → %s" % [eng.loc_label(eng.ch[b]["loc"]), _prey_at(eng, b, eng.ch[b]["loc"]), _danger(eng, eng.ch[b]["loc"]), eng.loc_label(goal), urgency(eng), str(r)])
+	return r
+
+
+func _beast_turn(eng, b: int, req: Dictionary):
 	var opts: Array = req["opts"]
 	var me: String = eng.ch[b]["loc"]
 	goal = beast_goal(eng, b)
@@ -384,7 +429,17 @@ func beast_turn(eng, b: int, req: Dictionary):
 			cards.append(pf)
 	var red_free: bool = req.get("red_free", true)
 	var blue_free: bool = req.get("blue_free", true)
-	# 1. preda qui: attacca (meglio se la carta permette anche di scappare)
+	# 1. preda qui: attacca (meglio se la carta permette anche di scappare). Se qui ci sono solo
+	#    animali e un colono è raggiungibile in questo turno, la Bestia di fretta va dal colono.
+	var u := urgency(eng)
+	if prey_here >= 1.0 and u > 0.35 and level >= 1 and not _settler_here(eng, b, me) and not _animals_score(eng):
+		# le carte d'attacco servono per i coloni: sugli animali solo se ne avanzano
+		var n_atk := 0
+		for pf in cards:
+			if pf["atk"]:
+				n_atk += 1
+		if n_atk < 3 or _settler_reachable(eng, b, me, cards, hab):
+			prey_here = 0.0
 	if prey_here >= 1.0:
 		var best = null
 		var bv := -99.0
@@ -414,6 +469,9 @@ func beast_turn(eng, b: int, req: Dictionary):
 			var v2 := 0.0
 			if pv > 0 and can_attack_after:
 				v2 = pv * 1.2 - _danger(eng, l) * tv("dmv") - float(reach[l]) * 0.2
+				# di fretta, gli animali a portata non distolgono dal colono che è l'obiettivo
+				if u > 0.35 and level >= 1 and not _settler_here(eng, b, l) and not _animals_score(eng):
+					v2 *= 0.35
 			elif pv > 0:
 				v2 = pv * 0.35 - _danger(eng, l) * 0.6
 			else:
@@ -450,6 +508,16 @@ func beast_turn(eng, b: int, req: Dictionary):
 	if util != null:
 		return util["o"]["id"]
 	# 5. avvicinarsi alle prede senza farsi vedere, oppure tenere le carte
+	# di fretta: avvicinarsi al colono invece di passare
+	if u > 0.5 and level >= 1 and eng.dist(me, goal, hab) > 1:
+		var near = null
+		var nv := -99.0
+		for pf in cards:
+			if pf["mv"] > 0 and not pf["atk"] and pf["mv"] > nv:
+				nv = pf["mv"]
+				near = pf
+		if near != null:
+			return near["o"]["id"]
 	for o in opts:
 		if str(o["id"]) == "pass" and (level >= 2 or rng.randf() < 0.6):
 			return "pass"
@@ -575,13 +643,41 @@ func _settler_wounds(eng, t: Dictionary) -> float:
 	return 0.0
 
 
+## Contratti di scorta (Naufragio, Titan): un colono vicino alla meta va fermato subito.
+func _escort_threat(eng, l: String) -> float:
+	if level < 1 or not _escort(eng):
+		return 0.0
+	var best := 99
+	for g in _escort_goals(eng):
+		best = min(best, int(eng.dist(l, g, "settlement")))
+	return max(0.0, 6.0 - float(best)) * 1.3
+
+
+func _settler_here(eng, b: int, l: String) -> bool:
+	for t in eng.attack_targets(b, l):
+		if str(t["t"]) == "settler":
+			return true
+	return false
+
+
+func _settler_reachable(eng, b: int, me: String, cards: Array, hab: String) -> bool:
+	for pf in cards:
+		if pf["mv"] <= 0 or not (pf["atk"] or _attack_left(cards, pf)):
+			continue
+		var reach: Dictionary = eng.dist_map(me, int(pf["mv"]), hab)
+		for l in reach:
+			if l != me and _settler_here(eng, b, l) and _danger(eng, l) < 3.0:
+				return true
+	return false
+
+
 func _prey_at(eng, b: int, l: String) -> float:
 	var v := 0.0
 	for t in eng.attack_targets(b, l):
 		match str(t["t"]):
 			"settler":
 				# Difficile: finire il colono già ferito (di notte guarisce)
-				v = max(v, prey_value(eng, b, t["kind"]) + _settler_wounds(eng, t) * tv("fin"))
+				v = max(v, prey_value(eng, b, t["kind"]) + _settler_wounds(eng, t) * tv("fin") + _escort_threat(eng, l))
 			"animal":
 				v = max(v, prey_value(eng, b, t["kind"]))
 			"hunter":
@@ -665,7 +761,7 @@ func beast_step(eng, b: int, req: Dictionary):
 			continue
 		var t: String = o.get("loc", me)
 		var v := -float(eng.dist(t, goal, hab)) * 1.0
-		v -= _danger(eng, t) * (tv("dst") if level >= 1 else 0.2)
+		v -= _danger(eng, t) * (tv("dst") if level >= 1 else 0.2) * (1.0 - 0.6 * urgency(eng))
 		v += _prey_at(eng, b, t) * 0.4
 		if level >= 1 and observed.has(t) == false and level >= 2:
 			v += 0.4

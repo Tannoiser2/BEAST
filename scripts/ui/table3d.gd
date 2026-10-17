@@ -394,6 +394,11 @@ func _piece(key: String, make: Callable) -> Node3D:
 	if pieces.has(key) and is_instance_valid(pieces[key]):
 		return pieces[key]
 	var n: Node3D = make.call()
+	if n == null:
+		# un pezzo che non si riesce a costruire non deve fermare l'aggiornamento del tavolo
+		push_warning("pezzo non costruito: " + key)
+		n = Node3D.new()
+		n.set_meta("new", true)
 	n.name = key.replace(":", "_")
 	add_child(n)
 	pieces[key] = n
@@ -427,7 +432,9 @@ func make_standee(id: String, tex_key: String, height := 0.95, base_col := Color
 		root.add_child(hold)
 		var ab := _scene_aabb(inst)
 		if ab.size.y > 0.0001:
-			var s := height / ab.size.y
+			# altezza voluta, ma senza che la basetta esca dal luogo (le Bestie larghe coprivano i vicini)
+			var foot: float = max(0.42, height * 0.62)
+			var s: float = min(height / ab.size.y, foot / max(0.0001, max(ab.size.x, ab.size.z)))
 			hold.scale = Vector3.ONE * s
 			hold.position = Vector3(-(ab.position.x + ab.size.x / 2) * s, -ab.position.y * s, -(ab.position.z + ab.size.z / 2) * s)
 		return root
@@ -497,7 +504,8 @@ func make_meeple(kind: String, height := 0.42) -> Node3D:
 	var mi := MeshInstance3D.new()
 	mi.mesh = mesh
 	var ab: AABB = mesh.get_aabb() if mesh != null else AABB(Vector3.ZERO, Vector3.ONE)
-	var s = height / max(ab.size.y, 0.001)
+	# altezza voluta, ma la sagoma lunga (cinghiale, orso) non deve uscire dal luogo
+	var s: float = min(height / max(ab.size.y, 0.001), 0.5 / max(0.001, max(ab.size.x, ab.size.z)))
 	mi.scale = Vector3.ONE * s
 	mi.position = Vector3(-(ab.position.x + ab.size.x / 2) * s, -ab.position.y * s, -(ab.position.z + ab.size.z / 2) * s)
 	mi.material_override = _mat(UI.tex("res://assets/models/%s.png" % kind), false, 0.75)
@@ -622,7 +630,11 @@ func update_view(v: Dictionary) -> void:
 			var it: Dictionary = arr[i]
 			seen[it["key"]] = true
 			var n5 := _piece(it["key"], it["mk"])
-			_place(n5, slot(l, i, arr.size(), 0.34 if arr.size() < 5 else 0.42))
+			var big := false
+			for it2 in arr:
+				if str(it2["key"]).begins_with("beast:") or str(it2["key"]).begins_with("ghost:"):
+					big = true
+			_place(n5, slot(l, i, arr.size(), (0.40 if big else 0.32) if arr.size() < 5 else 0.46))
 			_set_wounds(n5, int(it["extra"].get("wounds", 0)), int(it["extra"].get("armor", 0)))
 			if it["extra"].get("hidden", false) != n5.get_meta("hidden", false):
 				_set_hidden(n5, it["extra"].get("hidden", false))
@@ -665,14 +677,32 @@ func _trail_owner(v: Dictionary, l: String) -> String:
 
 func _make_ghost(id: String) -> Node3D:
 	var n := make_standee(id, "standee_" + id, 1.15, Color("#ffb070"))
-	for mi in n.find_children("*", "MeshInstance3D", true, false):
-		var m: StandardMaterial3D = (mi as MeshInstance3D).material_override.duplicate()
-		m.albedo_color = Color(1, 0.85, 0.7, 0.55)
-		m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-		m.emission_enabled = true
-		m.emission = Color("#ff9a40")
-		m.emission_energy_multiplier = 0.6
-		(mi as MeshInstance3D).material_override = m
+	for node in n.find_children("*", "MeshInstance3D", true, false):
+		var mi := node as MeshInstance3D
+		if mi.mesh == null:
+			continue
+		# sagome di cartone: materiale unico; miniature .glb: un materiale per superficie
+		var mats: Array = []
+		if mi.material_override != null:
+			mats.append(mi.material_override)
+		else:
+			for s in range(mi.mesh.get_surface_count()):
+				var sm: Material = mi.get_active_material(s)
+				mats.append(sm)
+		var out: Array = []
+		for src in mats:
+			var m: StandardMaterial3D = (src as StandardMaterial3D).duplicate() if src is StandardMaterial3D else StandardMaterial3D.new()
+			m.albedo_color = Color(1, 0.85, 0.7, 0.55)
+			m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+			m.emission_enabled = true
+			m.emission = Color("#ff9a40")
+			m.emission_energy_multiplier = 0.6
+			out.append(m)
+		if mi.material_override != null:
+			mi.material_override = out[0]
+		else:
+			for s in range(out.size()):
+				mi.set_surface_override_material(s, out[s])
 	var ring := MeshInstance3D.new()
 	var tm := TorusMesh.new()
 	tm.inner_radius = 0.24
@@ -809,16 +839,22 @@ func show_path(moves: Array, col := Color("#ff6a3a")) -> void:
 	for m in moves:
 		if str(m.get("from", "")) == str(m.get("to", "")):
 			continue
-		var a := loc_pos(m["from"]) + Vector3(0, 0.08, 0)
-		var b := loc_pos(m["to"]) + Vector3(0, 0.08, 0)
+		# striscia sottile appoggiata sulla mappa, a colore pieno (illuminata sembrava una tavoletta bianca)
+		var a := loc_pos(m["from"]) + Vector3(0, 0.012, 0)
+		var b := loc_pos(m["to"]) + Vector3(0, 0.012, 0)
 		var mi := MeshInstance3D.new()
 		var bm := BoxMesh.new()
-		bm.size = Vector3(0.07, 0.03, a.distance_to(b))
+		bm.size = Vector3(0.06, 0.012, a.distance_to(b))
 		mi.mesh = bm
 		var c2 := col
 		if m.get("fake", false):
 			c2 = Color("#9a9aff")
-		mi.material_override = _col_mat(c2, true)
+		var mat := StandardMaterial3D.new()
+		mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		mat.albedo_color = Color(c2, 0.85)
+		mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		mi.material_override = mat
+		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		mi.position = (a + b) / 2
 		marks.add_child(mi)
 		mi.look_at(b, Vector3.UP)

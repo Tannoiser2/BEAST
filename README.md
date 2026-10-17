@@ -116,20 +116,37 @@ segreti, 0 accessi negati, verifica superata, anche con uscita e rientro a metà
   credenza dei cacciatori e preferisce i percorsi che lasciano aperte più ipotesi, usa le carte Movimento
   false per lasciare tracce lontane dalla vera posizione, finisce i coloni già feriti prima che guariscano
   di notte.
-- **Taratura** con partite IA contro IA senza grafica (`tests/sim.gd`, 80 partite per casella, Bestie e
-  cacciatori a caso). Percentuale di vittorie della Bestia:
+- **Fretta della Bestia** (livelli Normale e Difficile): la Bestia confronta i coloni che le mancano per
+  vincere (o i passi di Dominio rosso nel Reggente) con i giorni che restano. Più è in ritardo, più i coloni
+  valgono, meno gli animali e meno pesa il pericolo dei cacciatori vicini; tiene le carte d'attacco per i
+  coloni invece di spenderle sugli animali, non si fa distrarre da un animale a portata quando il colono è
+  l'obiettivo e preferisce il Contadino (2 ferite) al Nobile (3) dove conta il numero di coloni uccisi.
+  Nel Reggente, con 2 Rovine, torna a cacciare animali (ogni ferita fa avanzare il rosso); nel Naufragio e
+  nella Titan dà la precedenza ai coloni più vicini alla meta.
+- **Taratura** con partite IA contro IA senza grafica (`tests/sim.gd`, Bestie e cacciatori a caso).
+  Vittorie della Bestia su 20 partite per contratto (stessi semi prima e dopo le modifiche di ottobre):
 
-| Contratto | Normale vs Normale | Bestia Difficile | Cacciatori Difficili | Difficile vs Difficile |
+| Contratto | Normale prima | Normale ora | Difficile prima | Difficile ora |
 |---|---|---|---|---|
-| Reggente delle rovine (2–3) | 7% | 18% | 7% | 16% |
-| Un patto dimenticato (4) | 26% | 32% | 27% | 25% |
-| L'arrivo della Titan (5) | 72% | 77% | 31% | 36% |
+| Reggente delle rovine | 1 | 1 | 1 | 6 |
+| Un patto dimenticato | 4 | 8 | 4 | 11 |
+| L'arrivo della Titan | 15 | 15 | 6 | 8 |
+| Segreti di un'era perduta | 4 | 10 | 2 | 4 |
+| Liberare l'Abisso | 3 | 7 | 3 | 7 |
+| Un'alleanza improbabile | 11 | 8 | 8 | 7 |
+| La Grande Purificazione | 4 | 9 | 6 | 10 |
+| Naufragio | 2 | 5 | 2 | 3 |
+| Attacco agli insediamenti del Nord | 5 | 11 | 5 | 7 |
+| I tumulti degli dèi del Nord | 0 | 1 | 0 | 2 |
+| **Totale** | **49/200** | **75/200** | **37/200** | **65/200** |
 
-  La Bestia Difficile vince più della Normale in tutti e tre i contratti (Reggente 7% → 18%, Patto 26% → 32%,
-  Titan 72% → 77%). I cacciatori Difficili battono nettamente i Normali nella Titan (72% → 31% di vittorie della
-  Bestia) e contro la Bestia Difficile nel Patto (32% → 25%); nel Reggente i cacciatori vincono già quasi
-  sempre e la differenza non si vede. Le 960 partite di prova hanno superato tutte la verifica commit–reveal.
-  I pesi del livello Difficile sono in `TUNE_BASE` (`scripts/core/ai.gd`) e si possono provare con `BS_TUNE`.
+  Restano sbilanciati verso i cacciatori il Reggente (12 di Dominio in tre giorni), il Naufragio (i cacciatori
+  spostano i coloni di un passo per ogni carta rossa e arrivano a Tiveden già il secondo giorno) e I tumulti
+  degli dèi del Nord (4 coloni). I pesi del livello Difficile sono in `TUNE_BASE` (`scripts/core/ai.gd`) e si possono
+  provare con `BS_TUNE`; con `BS_AIDBG=1` la simulazione stampa ogni scelta della Bestia.
+- **Prove di blocco**: `tests/rand_beast.gd` fa giocare alla Bestia «umana» mosse a caso (scelte che l'IA non
+  farebbe mai) e segnala partite ferme; `tests/human_beast.gd` gioca una partita intera dalla Bestia passando
+  dall'interfaccia e segnala richieste non mostrate o tavolo fermo.
 
 ## Carte sostituibili e testi
 - Tutte le immagini di carte, schede e contratti passano da `assets/cards/manifest.json` (id carta →
@@ -152,7 +169,9 @@ segreti, 0 accessi negati, verifica superata, anche con uscita e rientro a metà
 Animali e coloni hanno già i loro modelli 3D. Cacciatori, Bestie ed evocati nel gioco da tavolo sono sagome
 di cartone: per ora nel gioco sono sagome su basetta, ma **ognuna si sostituisce con una miniatura 3D
 mettendo `assets/miniatures/<id>.glb`** (il gioco la scala e la appoggia da solo, nessuna modifica al
-codice).
+codice). La scala tiene conto anche della larghezza: una Bestia tozza come Bolgin resta dentro il suo luogo
+invece di coprire i vicini, e lo stesso vale per le sagome lunghe degli animali. Quando giochi la Bestia,
+la sua posizione vera (diversa da quella nota ai cacciatori) è la stessa miniatura, arancione e trasparente.
 
 Per generarle con Meshy (immagine → 3D):
 ```
